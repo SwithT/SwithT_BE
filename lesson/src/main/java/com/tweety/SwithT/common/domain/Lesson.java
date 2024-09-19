@@ -36,7 +36,7 @@ public class Lesson extends BaseTimeEntity {
     private Status status = Status.STANDBY;
 
     @Builder.Default
-    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.PERSIST)
     private List<LessonDetail> lessonDetails = new ArrayList<>();
 
     @OneToOne
@@ -44,7 +44,7 @@ public class Lesson extends BaseTimeEntity {
     private LessonPlan lessonPlan;
 
     @Builder.Default
-    @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "lesson", cascade = CascadeType.PERSIST)
     private List<LessonAssignment> lessonAssignments = new ArrayList<>();
 
 
