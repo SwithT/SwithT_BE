@@ -15,7 +15,6 @@ import java.time.LocalTime;
 public class LessonDetail extends BaseTimeEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "lesson_detail_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -40,6 +39,6 @@ public class LessonDetail extends BaseTimeEntity{
     private LocalTime endTime;
 
     @Column(nullable = false, columnDefinition = "char(1) default 'N'")
-    private String status = "N";
+    private String isAvailable = "Y";
 
 }

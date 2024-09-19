@@ -18,7 +18,6 @@ import java.time.LocalTime;
 public class LessonAssignment extends BaseTimeEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "lesson_plan_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

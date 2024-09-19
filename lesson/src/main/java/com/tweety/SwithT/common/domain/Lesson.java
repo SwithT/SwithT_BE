@@ -12,9 +12,11 @@ import java.util.List;
 @Getter
 @Entity
 public class Lesson extends BaseTimeEntity {
-    @OneToOne
-    @JoinColumn(name = "tutee_id")
-    private Tutee tutee;
+    @Column(nullable = false)
+    private Long tutorId;
+
+    @Column(nullable = false)
+    private String tutorName;
 
     private String title;
 
@@ -30,7 +32,8 @@ public class Lesson extends BaseTimeEntity {
     private Category category;
 
     @Enumerated(EnumType.STRING)
-    private Status status;
+    @Builder.Default
+    private Status status = Status.STANDBY;
 
     @Builder.Default
     @OneToMany(mappedBy = "lesson", cascade = CascadeType.ALL)
