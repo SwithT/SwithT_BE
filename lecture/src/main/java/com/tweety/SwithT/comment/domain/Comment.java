@@ -25,10 +25,6 @@ public class Comment extends BaseTimeEntity {
     @JoinColumn(name = "board_id")
     private Board board;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lecture_id")
-    private Lecture lecture;
-
     private Long memberId;
     private MemberType memberType;
 

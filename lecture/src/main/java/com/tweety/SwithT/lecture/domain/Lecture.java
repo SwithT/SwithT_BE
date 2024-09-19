@@ -2,6 +2,7 @@ package com.tweety.SwithT.lecture.domain;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
+import com.tweety.SwithT.lecture_assignment.domain.LectureAssignment;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +11,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @AllArgsConstructor
@@ -54,5 +57,14 @@ public class Lecture extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     private Category category;
+
+
+    @Builder.Default
+    @OneToMany(mappedBy = "lecture", cascade = CascadeType.PERSIST)
+    private List<LectureDetail> lectureDetails = new ArrayList<>();
+
+    @Builder.Default
+    @OneToMany(mappedBy = "lecture", cascade = CascadeType.PERSIST)
+    private List<LectureAssignment> lectureAssignments = new ArrayList<>();
 
 }
