@@ -15,7 +15,7 @@ import java.time.LocalTime;
 @AllArgsConstructor
 @Getter
 @Entity
-public class LessonAssignment {
+public class LessonAssignment extends BaseTimeEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "lesson_plan_id")

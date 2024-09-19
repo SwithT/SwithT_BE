@@ -12,7 +12,7 @@ import java.time.LocalTime;
 @AllArgsConstructor
 @Getter
 @Entity
-public class LessonDetail {
+public class LessonDetail extends BaseTimeEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "lesson_detail_id")
