@@ -18,6 +18,7 @@ import com.tweety.SwithT.payment.repository.PaymentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -140,5 +142,10 @@ public class PaymentService {
         } else{
             throw new IllegalArgumentException("접근 권한이 없습니다.");
         }
+    }
+
+    public List<dto> myPaymentsList(Pageable pageable){
+        Long tuteeId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+        List<dto> all = new ArrayList<>();
     }
 }
