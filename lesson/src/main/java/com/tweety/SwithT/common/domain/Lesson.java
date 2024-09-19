@@ -12,11 +12,6 @@ import java.util.List;
 @Getter
 @Entity
 public class Lesson extends BaseTimeEntity {
-//    @Id
-//    @GeneratedValue(strategy = GenerationType.IDENTITY)
-//    @Column(name = "lesson_id")
-//    private Long id;
-
     @OneToOne
     @JoinColumn(name = "tutee_id")
     private Tutee tutee;
