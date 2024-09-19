@@ -1,4 +1,4 @@
-package com.tweety.SwithT.domain;
+package com.tweety.SwithT.payment.domain;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

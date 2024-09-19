@@ -1,4 +1,4 @@
-package com.tweety.SwithT.configs;
+package com.tweety.SwithT.common.configs;
 
 import com.siot.IamportRestClient.IamportClient;
 import jakarta.annotation.PostConstruct;

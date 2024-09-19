@@ -1,17 +1,25 @@
-package com.tweety.SwithT.service;
+package com.tweety.SwithT.payment.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.siot.IamportRestClient.IamportClient;
 import com.siot.IamportRestClient.response.IamportResponse;
 import com.siot.IamportRestClient.response.Payment;
-import com.tweety.SwithT.configs.IamportApiProperty;
-import com.tweety.SwithT.dto.LessonResponseDto;
-import com.tweety.SwithT.dto.PaymentDto;
-import com.tweety.SwithT.dto.PaymentSuccessEventDto;
+import com.tweety.SwithT.common.configs.IamportApiProperty;
+import com.tweety.SwithT.payment.domain.Balance;
+import com.tweety.SwithT.payment.domain.Status;
+import com.tweety.SwithT.payment.dto.LessonResponseDto;
+import com.tweety.SwithT.payment.dto.PaymentDto;
+import com.tweety.SwithT.payment.dto.PaymentSuccessEventDto;
+import com.tweety.SwithT.payment.repository.BalanceRepository;
+import com.tweety.SwithT.payment.repository.PaymentRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 public class PaymentService {
@@ -20,13 +28,17 @@ public class PaymentService {
     private final LessonFeign lessonFeign;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final BalanceRepository balanceRepository;
+    private final PaymentRepository paymentRepository;
 
     @Autowired
-    public PaymentService(IamportApiProperty iamportApiProperty, LessonFeign lessonFeign, KafkaTemplate<String, Object> kafkaTemplate, ObjectMapper objectMapper) {
+    public PaymentService(IamportApiProperty iamportApiProperty, LessonFeign lessonFeign, KafkaTemplate<String, Object> kafkaTemplate, ObjectMapper objectMapper, BalanceRepository balanceRepository, PaymentRepository paymentRepository) {
         this.iamportApiProperty = iamportApiProperty;
         this.lessonFeign = lessonFeign;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
+        this.balanceRepository = balanceRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     @Transactional
@@ -78,4 +90,21 @@ public class PaymentService {
             throw new IllegalArgumentException("결제 실패 또는 검증 오류");
         }
     }
+
+    @Transactional
+    @Scheduled(cron = "0 0 0 * * *") // 매일 00시에
+    public void balanceScheduler(){
+        List<Balance> balanceList = balanceRepository.findByStatus(Status.STANDBY);
+
+        LocalDate today = LocalDate.now();
+        for(Balance balance: balanceList){
+            LocalDate balancedDate = balance.getBalancedTime();
+            balancedDate = balancedDate.plusDays(7);
+            if(today.isAfter(balancedDate)){
+                balance.changeStatus();
+                // 여기에 tutorId 통해서 availableMoney 올려주는 이벤트 코드 작성 필요
+            }
+        }
+    }
+
 }

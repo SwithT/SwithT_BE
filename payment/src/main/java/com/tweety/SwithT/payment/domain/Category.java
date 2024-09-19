@@ -1,4 +1,4 @@
-package com.tweety.SwithT.domain;
+package com.tweety.SwithT.payment.domain;
 
 public enum Category {
     Lecture,

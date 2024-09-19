@@ -1,4 +1,4 @@
-package com.tweety.SwithT.dto;
+package com.tweety.SwithT.payment.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
