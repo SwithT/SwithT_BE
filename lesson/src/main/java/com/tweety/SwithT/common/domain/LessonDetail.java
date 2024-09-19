@@ -18,8 +18,10 @@ public class LessonDetail extends BaseTimeEntity{
     @Column(name = "lesson_detail_id")
     private Long id;
 
-    @OneToOne(mappedBy = "lesson")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lesson_id")
     private Lesson lesson;
+
     @Enumerated(EnumType.STRING)
     private LessonDetail lessonDetail;
 
