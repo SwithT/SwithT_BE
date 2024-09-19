@@ -19,7 +19,7 @@ public class LectureChatRoom extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne
+    @ManyToOne
     @JoinColumn(name = "lecture_id")
     private Lecture lecture;
 }
