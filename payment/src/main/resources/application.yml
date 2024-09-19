@@ -4,6 +4,11 @@ spring:
   application:
     name: payment-service
 
+imp:
+  code: imp00575764
+  key: 3703707833671424
+  secret: Guer6P3tAcUQRDGf34DZCVYDHjkuNAfaH6k0wr39NXLDkn2pfOgwzcd7FHP6NYeh1dYmcnKevqL8EfMG
+
 eureka:
   client:
     serviceUrl:
