@@ -2,22 +2,29 @@ package com.tweety.SwithT.payment.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.siot.IamportRestClient.IamportClient;
+import com.siot.IamportRestClient.exception.IamportResponseException;
+import com.siot.IamportRestClient.request.CancelData;
 import com.siot.IamportRestClient.response.IamportResponse;
 import com.siot.IamportRestClient.response.Payment;
 import com.tweety.SwithT.common.configs.IamportApiProperty;
 import com.tweety.SwithT.payment.domain.Balance;
+import com.tweety.SwithT.payment.domain.Payments;
 import com.tweety.SwithT.payment.domain.Status;
 import com.tweety.SwithT.payment.dto.LessonResponseDto;
 import com.tweety.SwithT.payment.dto.PaymentDto;
 import com.tweety.SwithT.payment.dto.PaymentSuccessEventDto;
 import com.tweety.SwithT.payment.repository.BalanceRepository;
 import com.tweety.SwithT.payment.repository.PaymentRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -107,4 +114,31 @@ public class PaymentService {
         }
     }
 
+    @Transactional
+//    일단 void로 놨음. 추후 Dto 변경 고려
+    public void refund(String impUid, BigDecimal amount, String cancelReason){
+        Long tuteeId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+        Payments payments = paymentRepository.findByImpUid(impUid).orElseThrow(
+                () -> new EntityNotFoundException("존재하지 않는 주문번호"));
+
+        if (payments.getTuteeId().equals(tuteeId)){
+            IamportClient iamportClient = iamportApiProperty.getIamportClient();
+
+            CancelData cancelData = new CancelData(impUid, true, amount);
+            cancelData.setReason(cancelReason);
+
+            try {
+                iamportClient.cancelPaymentByImpUid(cancelData);
+                // 여기 이후 로직 추가
+
+            } catch (IamportResponseException e) {
+                throw new RuntimeException("");
+            } catch (IOException e) {
+                throw new RuntimeException("");
+            }
+
+        } else{
+            throw new IllegalArgumentException("접근 권한이 없습니다.");
+        }
+    }
 }

@@ -31,7 +31,7 @@ public class Balance {
 
     @OneToOne
     @JoinColumn(name = "payment_id", nullable = false)
-    private Payment payment;
+    private Payments payments;
 
     private Long tutorId;
 
