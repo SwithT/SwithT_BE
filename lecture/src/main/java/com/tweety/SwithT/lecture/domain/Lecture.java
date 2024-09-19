@@ -58,6 +58,9 @@ public class Lecture extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private Category category;
 
+    @Column(nullable = false)
+    private Integer price;
+
 
     @Builder.Default
     @OneToMany(mappedBy = "lecture", cascade = CascadeType.PERSIST)
