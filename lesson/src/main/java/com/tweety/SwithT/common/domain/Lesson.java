@@ -28,6 +28,8 @@ public class Lesson extends BaseTimeEntity {
 
     private String location;
 
+    private int price;
+
     @Enumerated(EnumType.STRING)
     private Category category;
 
