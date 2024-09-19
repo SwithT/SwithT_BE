@@ -23,40 +23,23 @@ public class Payment {
     @Column(nullable = false)
     private Long tuteeId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Category category;
-
-    @Column(nullable = false)
-    private Long programId;
-
     private String impUid; // 아임포트 거래 고유번호
-
-    private String merchantUid; // 가맹점 주문번호
 
     private String pgTid; // PG사 거래번호
 
     private String paymentMethod; // 결제수단 (pay_method)
 
-    private boolean escrow; // 에스크로 여부
-
     private String applyNum; // 카드 승인번호
 
-    private String bankCode;
+    private String cardCode; // 카드사 코드번호
 
-    private String bankName;
-
-    private String cardCode;
-
-    private String cardName;
-
-    private String cardNumber;
-
-    private int cardQuota; // 할부 개월 수
+    private String cardNumber; // 결제에 사용된 마스킹된 카드번호
 
     private String name; // 구매한 서비스명
 
     private BigDecimal amount; // 결제 금액
+
+    private String currency; // 결제 통화 구분
 
     private BigDecimal cancelAmount; // 취소 금액
 
@@ -77,6 +60,5 @@ public class Payment {
 
     private String receiptUrl; // 영수증 URL
 
-    private boolean cashReceiptIssued; // 현금 영수증 발급 여부
 }
 
