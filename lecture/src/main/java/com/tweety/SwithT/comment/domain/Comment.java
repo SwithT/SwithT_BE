@@ -25,8 +25,10 @@ public class Comment extends BaseTimeEntity {
     @JoinColumn(name = "board_id")
     private Board board;
 
+    @Column(nullable = false)
     private Long memberId;
-    private MemberType memberType;
+    @Column(nullable = false)
+    private String memberName;
 
     @Column(nullable = false)
     private String contents;

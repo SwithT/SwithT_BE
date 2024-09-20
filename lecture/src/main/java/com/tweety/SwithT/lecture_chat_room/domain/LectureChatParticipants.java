@@ -22,5 +22,5 @@ public class LectureChatParticipants extends BaseTimeEntity {
     @JoinColumn(name = "chatRoom_id")
     private LectureChatRoom lectureChatRoom;
 
-    private Long tuteeId;
+    private Long memberId;
 }
