@@ -24,32 +24,15 @@ public class Lecture extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Long tutorId;
+    private Long memberId;
 
     @Column(nullable = false)
     private String title;
+
     @Column(nullable = false)
     private String contents;
+
     private String image;
-
-    // 강의 시작일
-    @Column(nullable = false)
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate startDate;
-    // 강의 종료일
-    @Column(nullable = false)
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate endDate;
-
-    // 강의 위치
-    @Column(nullable = false)
-    private String longitude;
-    @Column(nullable = false)
-    private String latitude;
-
-    // 강의 최대 인원수
-    @Column(nullable = false)
-    private Integer limit;
 
     // 강의 상태
     @Enumerated(EnumType.STRING)
@@ -58,16 +41,6 @@ public class Lecture extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private Category category;
 
-    @Column(nullable = false)
-    private Integer price;
 
-
-    @Builder.Default
-    @OneToMany(mappedBy = "lecture", cascade = CascadeType.PERSIST)
-    private List<LectureDetail> lectureDetails = new ArrayList<>();
-
-    @Builder.Default
-    @OneToMany(mappedBy = "lecture", cascade = CascadeType.PERSIST)
-    private List<LectureAssignment> lectureAssignments = new ArrayList<>();
 
 }

@@ -14,20 +14,17 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @Builder
 @Getter
-public class LectureDetail extends BaseTimeEntity {
+public class GroupTime extends BaseTimeEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lecture_id")
-    private Lecture lecture;
 
     @Enumerated(EnumType.STRING)
     private LectureDay lectureDay;
 
     @Column(nullable = false)
     private LocalTime startTime;
+
     @Column(nullable = false)
     private LocalTime endTime;
 }
