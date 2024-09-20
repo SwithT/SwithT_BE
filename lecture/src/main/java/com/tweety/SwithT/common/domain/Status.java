@@ -1,4 +1,4 @@
-package com.tweety.SwithT.lecture.domain;
+package com.tweety.SwithT.common.domain;
 
 import lombok.Getter;
 
@@ -7,5 +7,6 @@ public enum Status {
     STANDBY,
     REJECT,
     ADMIT,
-    TERMINATE
+    TERMINATE,
+    CANCEL
 }

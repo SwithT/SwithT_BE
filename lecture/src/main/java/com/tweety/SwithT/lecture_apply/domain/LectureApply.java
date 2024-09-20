@@ -1,6 +1,7 @@
 package com.tweety.SwithT.lecture_apply.domain;
 
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
+import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -20,8 +21,14 @@ public class LectureApply extends BaseTimeEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lecture_id")
-    private Lecture lecture;
+    @JoinColumn(name = "lecture_group_id")
+    private LectureGroup lectureGroup;
 
-    private Long tuteeId;
+    @Column(nullable = false)
+    private Long memberId;
+
+    @Builder.Default
+    private Status status = Status.STANDBY;
+
+
 }
