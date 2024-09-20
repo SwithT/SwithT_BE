@@ -20,6 +20,6 @@ public class LectureChatRoom extends BaseTimeEntity {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "lecture_id")
-    private Lecture lecture;
+    @JoinColumn(name = "lecture_group_id")
+    private LectureGroup lectureGroup;
 }

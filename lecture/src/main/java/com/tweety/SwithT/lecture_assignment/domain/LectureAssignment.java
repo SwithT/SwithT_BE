@@ -25,8 +25,8 @@ public class LectureAssignment extends BaseTimeEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lecture_id")
-    private Lecture lecture;
+    @JoinColumn(name = "lecture_group_id")
+    private LectureGroup lectureGroup;
 
     @Column(nullable = false)
     private String title;
