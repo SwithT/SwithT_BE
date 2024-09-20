@@ -21,8 +21,8 @@ public class Board extends BaseTimeEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lecture_id")
-    private Lecture lecture;
+    @JoinColumn(name = "lecture_group_id")
+    private Lecture lectureGroup;
 
     @Column(nullable = false)
     private Long memberId;
