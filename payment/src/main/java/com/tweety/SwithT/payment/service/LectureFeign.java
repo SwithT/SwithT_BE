@@ -1,14 +1,18 @@
 package com.tweety.SwithT.payment.service;
 
 import com.tweety.SwithT.common.configs.FeignConfig;
+import com.tweety.SwithT.common.dto.CommonResDto;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 
 @FeignClient(name="lecture-service", configuration = FeignConfig.class)
 public interface LectureFeign {
 
-//    @GetMapping(value = "/ads")
-//    CommonResDto get~~~Id(@PathVariable("id") Long id);
-//
-//    @PutMapping(value = "adsad")
-//
+    @GetMapping(value = "/lecture/payment/{id}")
+    CommonResDto getLectureById(@PathVariable("id") Long lecturePaymentId);
+
+    @PostMapping(value = "/lecture/paid/status")
+    CommonResDto paidStatus(CommonResDto commonResDto);
 }

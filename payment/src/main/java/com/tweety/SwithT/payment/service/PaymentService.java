@@ -7,18 +7,22 @@ import com.siot.IamportRestClient.request.CancelData;
 import com.siot.IamportRestClient.response.IamportResponse;
 import com.siot.IamportRestClient.response.Payment;
 import com.tweety.SwithT.common.configs.IamportApiProperty;
+import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.payment.domain.Balance;
 import com.tweety.SwithT.payment.domain.Payments;
 import com.tweety.SwithT.payment.domain.Status;
-import com.tweety.SwithT.payment.dto.LessonResponseDto;
+import com.tweety.SwithT.payment.dto.LecturePayResDto;
 import com.tweety.SwithT.payment.dto.PaymentDto;
-import com.tweety.SwithT.payment.dto.PaymentSuccessEventDto;
+import com.tweety.SwithT.payment.dto.PaymentListDto;
 import com.tweety.SwithT.payment.repository.BalanceRepository;
 import com.tweety.SwithT.payment.repository.PaymentRepository;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,23 +31,22 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class PaymentService {
 
     private final IamportApiProperty iamportApiProperty;
-    private final LessonFeign lessonFeign;
+    private final LectureFeign lectureFeign;
     private final KafkaTemplate<String, Object> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final BalanceRepository balanceRepository;
     private final PaymentRepository paymentRepository;
 
     @Autowired
-    public PaymentService(IamportApiProperty iamportApiProperty, LessonFeign lessonFeign, KafkaTemplate<String, Object> kafkaTemplate, ObjectMapper objectMapper, BalanceRepository balanceRepository, PaymentRepository paymentRepository) {
+    public PaymentService(IamportApiProperty iamportApiProperty, LectureFeign lectureFeign, KafkaTemplate<String, Object> kafkaTemplate, ObjectMapper objectMapper, BalanceRepository balanceRepository, PaymentRepository paymentRepository) {
         this.iamportApiProperty = iamportApiProperty;
-        this.lessonFeign = lessonFeign;
+        this.lectureFeign = lectureFeign;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
         this.balanceRepository = balanceRepository;
@@ -51,14 +54,42 @@ public class PaymentService {
     }
 
     @Transactional
-    public Boolean isPaymentComplete(PaymentDto dto) {
+    public CommonResDto handleLessonAndPayment(Long lecturePayId) {
+        // 과외 정보를 Feign Client로 가져옴
+        CommonResDto commonResDto = getLecturePayInfo(lecturePayId);
+        LecturePayResDto lecturePayResDto = objectMapper.convertValue(
+                commonResDto.getResult(), LecturePayResDto.class);
+
+        PaymentDto paymentDto = PaymentDto.builder()
+                .impUid(lecturePayResDto.getImpUid())
+                .price(lecturePayResDto.getPrice())
+                .build();
+
+        Boolean status = isPaymentComplete(paymentDto);
+
+        if (status) {
+            CommonResDto returnResDto = new CommonResDto(
+                    HttpStatus.OK, "결제가 성공적으로 완료되었습니다.", status);
+            lectureFeign.paidStatus(returnResDto);
+            return returnResDto;
+        } else {
+            CommonResDto returnResDto = new CommonResDto(
+                    HttpStatus.OK, "결제에 실패했습니다.", status);
+            lectureFeign.paidStatus(returnResDto);
+            return returnResDto;
+        }
+    }
+
+    private Boolean isPaymentComplete(PaymentDto dto) {
         IamportClient iamportClient = iamportApiProperty.getIamportClient();
         IamportResponse<Payment> paymentResponse;
 
         try {
             paymentResponse = iamportClient.paymentByImpUid(dto.getImpUid()); // 결제 검증
-        } catch (Exception e) {
+        } catch (IamportResponseException e) {
             throw new IllegalArgumentException("결제 검증 실패: " + e.getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
         // 결제 상태 검증
@@ -68,36 +99,18 @@ public class PaymentService {
 
         // 결제 금액 검증
         long paidAmount = paymentResponse.getResponse().getAmount().longValue();
-        long totalPrice = dto.getPrice();
+        long lecturePrice = dto.getPrice();
 
-        if (paidAmount != totalPrice) {
+        if (paidAmount != lecturePrice) {
             throw new IllegalArgumentException("결제 금액이 일치하지 않습니다.");
         }
-
-        // 비동기적으로 Kafka로 결제 완료 이벤트 전송
-        PaymentSuccessEventDto event = new PaymentSuccessEventDto(
-                paymentResponse.getResponse().getImpUid(), paidAmount);
-        kafkaTemplate.send("payment-success-topic", event);
 
         return true;
     }
 
     // Feign Client를 사용하여 과외 정보 가져오기
-    public LessonResponseDto getLessonInfo(Long lessonId) {
-        return lessonFeign.getLessonById(lessonId);
-    }
-
-    public void handleLessonAndPayment(Long lessonId, PaymentDto paymentDto) {
-        // 과외 정보를 Feign Client로 가져옴
-        LessonResponseDto lessonResponse = getLessonInfo(lessonId);
-
-        // 결제 정보 검증 후 비동기 처리
-        if (isPaymentComplete(paymentDto)) {
-            // 결제 성공 이벤트를 Kafka를 통해 발행
-            kafkaTemplate.send("payment-complete-topic", lessonResponse);
-        } else {
-            throw new IllegalArgumentException("결제 실패 또는 검증 오류");
-        }
+    private CommonResDto getLecturePayInfo(Long lecturePayId) {
+        return lectureFeign.getLectureById(lecturePayId);
     }
 
     @Transactional
@@ -144,8 +157,13 @@ public class PaymentService {
         }
     }
 
-    public List<dto> myPaymentsList(Pageable pageable){
+    public Page<PaymentListDto> myPaymentsList(int page, int size){
         Long tuteeId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
-        List<dto> all = new ArrayList<>();
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Payments> paymentList = paymentRepository.findByTuteeId(pageable, tuteeId);
+        Page<PaymentListDto> dtos = paymentList.map(Payments::fromEntity);
+
+        return dtos;
     }
 }

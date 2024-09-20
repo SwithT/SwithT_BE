@@ -1,5 +1,6 @@
 package com.tweety.SwithT.payment.domain;
 
+import com.tweety.SwithT.payment.dto.PaymentListDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,5 +61,14 @@ public class Payments {
 
     private String receiptUrl; // 영수증 URL
 
+    public PaymentListDto fromEntity(){
+        return PaymentListDto.builder()
+                .id(this.id)
+                .name(this.name)
+                .amount(this.amount)
+                .paidAt(this.paidAt)
+                .receiptUrl(this.receiptUrl)
+                .build();
+    }
 }
 
