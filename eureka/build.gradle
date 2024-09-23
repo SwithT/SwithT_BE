@@ -17,13 +17,21 @@ repositories {
 	mavenCentral()
 }
 
+ext{
+	set('springCloudVersion', '2023.0.3')
+}
+
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-server'
 }
 
-ext{
-	set('springCloudVersion', '2021.0.8')
-}
+
 
 dependencyManagement {
 	imports {
