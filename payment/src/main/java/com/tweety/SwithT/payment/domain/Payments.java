@@ -22,7 +22,7 @@ public class Payments {
     private Long id;
 
     @Column(nullable = false)
-    private Long tuteeId;
+    private Long memberId;
 
     private String impUid; // 아임포트 거래 고유번호
 
@@ -69,6 +69,10 @@ public class Payments {
                 .paidAt(this.paidAt)
                 .receiptUrl(this.receiptUrl)
                 .build();
+    }
+
+    public void updateStatusToCancelled(){
+        this.status = String.valueOf(Status.CANCELED);
     }
 }
 

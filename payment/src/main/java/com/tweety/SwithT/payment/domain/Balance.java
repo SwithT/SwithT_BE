@@ -33,7 +33,7 @@ public class Balance {
     @JoinColumn(name = "payment_id", nullable = false)
     private Payments payments;
 
-    private Long tutorId;
+    private Long memberId;
 
     public Balance changeStatus(){
         this.status = Status.ADMIT;

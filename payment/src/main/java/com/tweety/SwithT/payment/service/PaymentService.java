@@ -11,9 +11,7 @@ import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.payment.domain.Balance;
 import com.tweety.SwithT.payment.domain.Payments;
 import com.tweety.SwithT.payment.domain.Status;
-import com.tweety.SwithT.payment.dto.LecturePayResDto;
-import com.tweety.SwithT.payment.dto.PaymentDto;
-import com.tweety.SwithT.payment.dto.PaymentListDto;
+import com.tweety.SwithT.payment.dto.*;
 import com.tweety.SwithT.payment.repository.BalanceRepository;
 import com.tweety.SwithT.payment.repository.PaymentRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -27,10 +25,15 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -65,22 +68,26 @@ public class PaymentService {
                 .price(lecturePayResDto.getPrice())
                 .build();
 
-        Boolean status = isPaymentComplete(paymentDto);
+        Boolean status = isPaymentComplete(paymentDto, lecturePayResDto);
 
         if (status) {
             CommonResDto returnResDto = new CommonResDto(
                     HttpStatus.OK, "결제가 성공적으로 완료되었습니다.", status);
-            lectureFeign.paidStatus(returnResDto);
+            try {
+                lectureFeign.paidStatus(returnResDto);
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Feign 통신 중 오류 발생: " + e.getMessage());
+            }
             return returnResDto;
         } else {
             CommonResDto returnResDto = new CommonResDto(
-                    HttpStatus.OK, "결제에 실패했습니다.", status);
+                    HttpStatus.BAD_REQUEST, "결제에 실패했습니다.", status);
             lectureFeign.paidStatus(returnResDto);
             return returnResDto;
         }
     }
 
-    private Boolean isPaymentComplete(PaymentDto dto) {
+    private Boolean isPaymentComplete(PaymentDto dto, LecturePayResDto lecturePayResDto) {
         IamportClient iamportClient = iamportApiProperty.getIamportClient();
         IamportResponse<Payment> paymentResponse;
 
@@ -89,21 +96,48 @@ public class PaymentService {
         } catch (IamportResponseException e) {
             throw new IllegalArgumentException("결제 검증 실패: " + e.getMessage());
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("결제 검증 중 IO 오류 발생", e);
         }
 
+        Payment payment = paymentResponse.getResponse();
+
         // 결제 상태 검증
-        if (!"paid".equals(paymentResponse.getResponse().getStatus())) {
+        if (!"paid".equals(payment.getStatus())) {
             throw new IllegalArgumentException("결제가 완료되지 않았습니다.");
         }
 
         // 결제 금액 검증
-        long paidAmount = paymentResponse.getResponse().getAmount().longValue();
+        long paidAmount = payment.getAmount().longValue();
         long lecturePrice = dto.getPrice();
 
         if (paidAmount != lecturePrice) {
-            throw new IllegalArgumentException("결제 금액이 일치하지 않습니다.");
+            throw new IllegalArgumentException("결제 금액이 일치하지 않습니다. (지불 금액: " + paidAmount + ", 예상 금액: " + lecturePrice + ")");
         }
+
+        // 결제 정보 저장
+        Payments payments = Payments.builder()
+                .memberId(lecturePayResDto.getMemberId())
+                .impUid(payment.getImpUid())
+                .pgTid(payment.getPgTid())
+                .paymentMethod(payment.getPayMethod())
+                .applyNum(payment.getApplyNum())
+                .cardCode(payment.getCardCode())
+                .cardNumber(payment.getCardNumber())
+                .name(payment.getName())
+                .amount(payment.getAmount())
+                .currency(payment.getCurrency())
+                .cancelAmount(payment.getCancelAmount() == null ? BigDecimal.ZERO : payment.getCancelAmount())
+                .status(payment.getStatus())
+                .startedAt(convertUnixToLocalDateTime(payment.getStartedAt()))
+                .paidAt(convertDateToLocalDateTime(payment.getPaidAt()))
+                .failedAt(payment.getFailedAt() != null ? convertDateToLocalDateTime(payment.getFailedAt()) : null)
+                .cancelledAt(payment.getCancelledAt() != null ? convertDateToLocalDateTime(payment.getCancelledAt()) : null)
+                .failReason(payment.getFailReason())
+                .cancelReason(payment.getCancelReason())
+                .receiptUrl(payment.getReceiptUrl())
+                .build();
+
+        paymentRepository.save(payments);
 
         return true;
     }
@@ -113,53 +147,111 @@ public class PaymentService {
         return lectureFeign.getLectureById(lecturePayId);
     }
 
+    // Unix 타임 (long) -> LocalDateTime 변환 메서드
+    private LocalDateTime convertUnixToLocalDateTime(long unixTime) {
+        return LocalDateTime.ofInstant(Instant.ofEpochSecond(unixTime), ZoneId.systemDefault());
+    }
+
+    // Date -> LocalDateTime 변환 메서드
+    private LocalDateTime convertDateToLocalDateTime(Date date) {
+        return LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
+    }
+
     @Transactional
     @Scheduled(cron = "0 0 0 * * *") // 매일 00시에
-    public void balanceScheduler(){
+    public void balanceScheduler() {
         List<Balance> balanceList = balanceRepository.findByStatus(Status.STANDBY);
-
         LocalDate today = LocalDate.now();
-        for(Balance balance: balanceList){
-            LocalDate balancedDate = balance.getBalancedTime();
-            balancedDate = balancedDate.plusDays(7);
-            if(today.isAfter(balancedDate)){
+
+        for (Balance balance : balanceList) {
+            LocalDate balancedDate = balance.getBalancedTime().plusDays(7);
+
+            if (today.isAfter(balancedDate)) {
                 balance.changeStatus();
-                // 여기에 tutorId 통해서 availableMoney 올려주는 이벤트 코드 작성 필요
+                balanceRepository.save(balance);
+
+                // memberId 통해서 availableMoney 올려주는 이벤트 코드
+                BalanceUpdateDto balanceUpdateDto = new BalanceUpdateDto(balance.getMemberId(), balance.getCost());
+
+                // Kafka 전송 비동기 처리 (재시도 포함: 3번까지 전송)
+                sendMessageWithRetry("balance-update-topic", balanceUpdateDto, 3);
             }
         }
     }
 
+    private void sendMessageWithRetry(String topic, BalanceUpdateDto balanceUpdateDto, int retryCount) {
+        kafkaTemplate.send(topic, balanceUpdateDto)
+                .thenAccept(result -> {
+                    // 성공 시 특별한 처리 필요 없음
+                })
+                .exceptionally(ex -> {
+                    if (retryCount > 0) {
+                        // 전송 실패 시 재시도
+                        System.err.println("Kafka 전송 실패. 남은 재시도 횟수: " + retryCount + ", 이유: " + ex.getMessage());
+                        sendMessageWithRetry(topic, balanceUpdateDto, retryCount - 1);
+                    } else {
+                        // 재시도 횟수가 모두 소진된 경우 예외 처리
+                        System.err.println("Kafka 전송 실패. 재시도 횟수 초과: " + ex.getMessage());
+                    }
+                    return null;  // 처리 후 null 반환
+                });
+    }
+
     @Transactional
-//    일단 void로 놨음. 추후 Dto 변경 고려
-    public void refund(String impUid, BigDecimal amount, String cancelReason){
-        Long tuteeId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+    public void refund(String impUid, BigDecimal amount, String cancelReason) {
+        Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+
+        // 결제 정보 조회
         Payments payments = paymentRepository.findByImpUid(impUid).orElseThrow(
                 () -> new EntityNotFoundException("존재하지 않는 주문번호"));
 
-        if (payments.getTuteeId().equals(tuteeId)){
-            IamportClient iamportClient = iamportApiProperty.getIamportClient();
-
-            CancelData cancelData = new CancelData(impUid, true, amount);
-            cancelData.setReason(cancelReason);
-
-            try {
-                iamportClient.cancelPaymentByImpUid(cancelData);
-                // 여기 이후 로직 추가
-
-            } catch (IamportResponseException e) {
-                throw new RuntimeException("");
-            } catch (IOException e) {
-                throw new RuntimeException("");
-            }
-
-        } else{
+        // 결제된 멤버가 현재 로그인한 멤버와 동일한지 확인
+        if (!payments.getMemberId().equals(memberId)) {
             throw new IllegalArgumentException("접근 권한이 없습니다.");
+        }
+
+        // 환불 가능 기간(7일) 체크
+        LocalDateTime paymentDate = payments.getPaidAt();
+        LocalDateTime now = LocalDateTime.now();
+
+        if (paymentDate == null || paymentDate.plusDays(7).isBefore(now)) {
+            throw new IllegalArgumentException("결제 후 7일이 경과하여 환불이 불가능합니다.");
+        }
+
+        IamportClient iamportClient = iamportApiProperty.getIamportClient();
+        CancelData cancelData = new CancelData(impUid, true, amount);
+        cancelData.setReason(cancelReason);
+
+        try {
+            // 결제 취소 요청
+            IamportResponse<Payment> response = iamportClient.cancelPaymentByImpUid(cancelData);
+            Payment cancelledPayment = response.getResponse();
+
+            if (cancelledPayment != null && "cancelled".equals(cancelledPayment.getStatus())) {
+                payments.updateStatusToCancelled();
+                paymentRepository.save(payments);
+
+                // Feign Client를 통해 환불 상태 업데이트 요청
+                RefundReqDto refundRequest = new RefundReqDto();
+                refundRequest.setImpUid(impUid);
+                refundRequest.setAmount(amount);
+                refundRequest.setCancelReason(cancelReason);
+                lectureFeign.refundStatus(refundRequest);
+            } else {
+                throw new RuntimeException("결제 취소 중 오류 발생: 결제 상태를 확인할 수 없습니다.");
+            }
+        } catch (IamportResponseException | IOException e) {
+            throw new RuntimeException("결제 취소 중 오류 발생: " + e.getMessage());
         }
     }
 
-    public Page<PaymentListDto> myPaymentsList(int page, int size){
+    public Page<PaymentListDto> myPaymentsList(int page, int size) {
         Long tuteeId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
-        Pageable pageable = PageRequest.of(page, size);
+
+        int validPage = Math.max(page, 0);
+        int validSize = Math.min(size, 100);
+
+        Pageable pageable = PageRequest.of(validPage, validSize);
 
         Page<Payments> paymentList = paymentRepository.findByTuteeId(pageable, tuteeId);
         Page<PaymentListDto> dtos = paymentList.map(Payments::fromEntity);

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface PaymentRepository extends JpaRepository<Long, Payments> {
+public interface PaymentRepository extends JpaRepository<Payments, Long> {
     Optional<Payments> findByImpUid(String impUid);
     Page<Payments> findByTuteeId(Pageable pageable, Long tuteeId);
 }
