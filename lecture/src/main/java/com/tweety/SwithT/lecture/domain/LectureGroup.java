@@ -27,11 +27,15 @@ public class LectureGroup extends BaseTimeEntity {
     private Lecture lecture;
 
     @Column(nullable = false, columnDefinition = "char(1) default 'Y'")
-    private String isAvailable = "Y";
+    private String isAvailable;
 
-    private Integer price = 0;
+    @Column(columnDefinition = "integer default 0")
+    private Integer price;
 
-    private Integer limit;
+    @Column(columnDefinition = "integer default 1")
+    private Integer limit_people;
+
+
 
     private String latitude;
 

@@ -19,8 +19,9 @@ public class LectureApplyController {
     //과외 신청
     @PostMapping("/single-lecture-apply")
     public ResponseEntity<?> tuteeSingleLectureApply(SingleLectureApplySavedDto dto){
-        CommonResDto commonResDto = new CommonResDto(HttpStatus.CREATED, "튜티의 과외 신청 완료", lectureApplyService.tuteeSingleLectureApply(dto));
 
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.CREATED, "튜티의 과외 신청 완료", lectureApplyService.tuteeSingleLectureApply(dto));
+        return new ResponseEntity<>(commonResDto, HttpStatus.CREATED);
 
     }
 

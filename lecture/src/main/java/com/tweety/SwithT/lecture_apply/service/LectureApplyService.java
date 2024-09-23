@@ -32,7 +32,6 @@ public class LectureApplyService {
     @Transactional
     public SingleLectureApplyAfterResDto tuteeSingleLectureApply(SingleLectureApplySavedDto dto) {
         Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-
         LectureGroup lectureGroup = lectureGroupRepository.findById(dto.getLectureGroupId()).orElseThrow(()->{
             throw new EntityNotFoundException("해당 과외는 존재하지 않습니다.");
         });
