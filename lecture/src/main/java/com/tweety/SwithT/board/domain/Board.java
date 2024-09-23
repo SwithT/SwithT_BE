@@ -35,13 +35,14 @@ public class Board extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private Type type;
 
-    // Todo List comment 받기
 
     public void updateBoard(BoardUpdateRequest dto) {
         this.title = dto.getTitle();
         this.contents = dto.getContents();
         this.type = dto.getType();
     }
+
+
 
 
 

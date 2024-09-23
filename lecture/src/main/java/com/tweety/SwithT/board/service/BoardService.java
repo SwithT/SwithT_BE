@@ -1,9 +1,9 @@
 package com.tweety.SwithT.board.service;
 
 import com.tweety.SwithT.board.domain.Board;
-import com.tweety.SwithT.board.domain.Type;
 import com.tweety.SwithT.board.dto.create.BoardCreateRequest;
 import com.tweety.SwithT.board.dto.create.BoardCreateResponse;
+import com.tweety.SwithT.board.dto.delete.BoardDeleteResponse;
 import com.tweety.SwithT.board.dto.read.BoardDetailResponse;
 import com.tweety.SwithT.board.dto.read.BoardListResponse;
 import com.tweety.SwithT.board.dto.update.BoardUpdateRequest;
@@ -12,10 +12,11 @@ import com.tweety.SwithT.board.repository.BoardRepository;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -29,6 +30,11 @@ public class BoardService {
 
     //create
     public BoardCreateResponse createBoard(Long lectureGroupId, BoardCreateRequest dto){
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        UserDetails userDetails = (UserDetails)principal;
+        System.out.println("security contextholder : "+userDetails);
+//        String username = principal.getUsername();
+//        String password = principal.getPassword();
         String email = SecurityContextHolder.getContext()
                 .getAuthentication()
                 .getName();
@@ -45,6 +51,7 @@ public class BoardService {
 
     public BoardDetailResponse boardDetail(Long boardId){
         Board board = boardRepository.findById(boardId).orElseThrow(()->new EntityNotFoundException("해당 게시글이 없습니다."));
+        // Todo : comments도 한번에 보여주기
         return BoardDetailResponse.fromEntity(board);
     }
     @Transactional
@@ -60,12 +67,10 @@ public class BoardService {
         return BoardUpdateResponse.fromEntity(board);
     }
 
-    public String boardDelete(Long boardId){
+    public BoardDeleteResponse boardDelete(Long boardId){
         Board board = boardRepository.findById(boardId).orElseThrow(()->new EntityNotFoundException("해당 게시글이 없습니다."));
-        String title = board.getTitle();
-        board.set
-        boardRepository.deleteById(boardId);
-        return "제목 : "+title+" 의 게시글이 삭제되었습니다.";
+        board.updateDelYn();
+        return BoardDeleteResponse.fromEntity(board);
     }
 
 
