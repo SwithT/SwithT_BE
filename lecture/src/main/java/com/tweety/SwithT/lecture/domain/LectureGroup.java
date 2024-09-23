@@ -37,11 +37,9 @@ public class LectureGroup extends BaseTimeEntity {
 
     private String longitude;
 
-    @Column(nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
-    @Column(nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 

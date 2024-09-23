@@ -41,6 +41,4 @@ public class Lecture extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private Category category;
 
-
-
 }
