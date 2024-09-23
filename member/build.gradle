@@ -16,7 +16,9 @@ java {
 repositories {
 	mavenCentral()
 }
-
+ext{
+	set('springCloudVersion', '2023.0.3')
+}
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
@@ -28,10 +30,6 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
-}
-
-ext{
-	set('springCloudVersion', '2021.0.8')
 }
 
 dependencyManagement {

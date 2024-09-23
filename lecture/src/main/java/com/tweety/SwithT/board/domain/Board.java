@@ -1,19 +1,17 @@
 package com.tweety.SwithT.board.domain;
 
+import com.tweety.SwithT.board.dto.update.BoardUpdateRequest;
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
-import com.tweety.SwithT.common.domain.MemberType;
-import com.tweety.SwithT.lecture.domain.Lecture;
+import com.tweety.SwithT.lecture.domain.LectureGroup;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Getter
+@Setter
 public class Board extends BaseTimeEntity {
 
     @Id
@@ -22,7 +20,7 @@ public class Board extends BaseTimeEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lecture_group_id")
-    private Lecture lectureGroup;
+    private LectureGroup lectureGroup;
 
     @Column(nullable = false)
     private Long memberId;
@@ -36,6 +34,15 @@ public class Board extends BaseTimeEntity {
     private String contents;
     @Enumerated(EnumType.STRING)
     private Type type;
+
+    // Todo List comment 받기
+
+    public void updateBoard(BoardUpdateRequest dto) {
+        this.title = dto.getTitle();
+        this.contents = dto.getContents();
+        this.type = dto.getType();
+    }
+
 
 
 }

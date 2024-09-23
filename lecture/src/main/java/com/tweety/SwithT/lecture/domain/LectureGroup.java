@@ -31,7 +31,7 @@ public class LectureGroup extends BaseTimeEntity {
 
     private Integer price = 0;
 
-    private Integer limit;
+    private Integer limitPeople;
 
     private String latitude;
 
@@ -41,7 +41,7 @@ public class LectureGroup extends BaseTimeEntity {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
