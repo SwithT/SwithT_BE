@@ -2,15 +2,14 @@ package com.tweety.SwithT.payment.controller;
 
 import com.tweety.SwithT.common.dto.CommonErrorDto;
 import com.tweety.SwithT.common.dto.CommonResDto;
+import com.tweety.SwithT.payment.dto.PaymentListDto;
 import com.tweety.SwithT.payment.dto.RefundReqDto;
 import com.tweety.SwithT.payment.service.PaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
@@ -61,6 +60,21 @@ public class PaymentController {
             CommonErrorDto commonErrorDto = new CommonErrorDto(
                     HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return new ResponseEntity<>(commonErrorDto, HttpStatus.BAD_REQUEST);
+        } catch (RuntimeException e) {
+            CommonErrorDto commonErrorDto = new CommonErrorDto(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
+            return new ResponseEntity<>(commonErrorDto, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 나의 결제 내역 조회 API 추가
+    @GetMapping("/my-payments")
+    public ResponseEntity<?> myPaymentsList(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            Page<PaymentListDto> payments = paymentService.myPaymentsList(page, size);
+            return new ResponseEntity<>(payments, HttpStatus.OK);
         } catch (RuntimeException e) {
             CommonErrorDto commonErrorDto = new CommonErrorDto(
                     HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());

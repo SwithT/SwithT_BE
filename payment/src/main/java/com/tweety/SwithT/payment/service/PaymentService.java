@@ -68,24 +68,28 @@ public class PaymentService {
                 .price(lecturePayResDto.getPrice())
                 .build();
 
+        // 결제 완료 상태 확인
         Boolean status = isPaymentComplete(paymentDto, lecturePayResDto);
 
-        if (status) {
-            CommonResDto returnResDto = new CommonResDto(
-                    HttpStatus.OK, "결제가 성공적으로 완료되었습니다.", status);
-            try {
-                lectureFeign.paidStatus(returnResDto);
-            } catch (Exception e) {
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Feign 통신 중 오류 발생: " + e.getMessage());
-            }
-            return returnResDto;
-        } else {
-            CommonResDto returnResDto = new CommonResDto(
-                    HttpStatus.BAD_REQUEST, "결제에 실패했습니다.", status);
+        // 상태에 따른 응답 생성
+        HttpStatus responseStatus = status ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+        String responseMessage = status ? "결제가 성공적으로 완료되었습니다." : "결제에 실패했습니다.";
+
+        CommonResDto returnResDto = new CommonResDto(
+                responseStatus, responseMessage, status);
+
+        // 결제 상태 업데이트 요청
+        try {
             lectureFeign.paidStatus(returnResDto);
-            return returnResDto;
+        } catch (Exception e) {
+            // Feign 호출 실패 시 롤백 및 예외 처리
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Feign 통신 중 오류 발생: " + e.getMessage());
         }
+
+        return returnResDto;
     }
+
 
     private Boolean isPaymentComplete(PaymentDto dto, LecturePayResDto lecturePayResDto) {
         IamportClient iamportClient = iamportApiProperty.getIamportClient();
@@ -111,7 +115,8 @@ public class PaymentService {
         long lecturePrice = dto.getPrice();
 
         if (paidAmount != lecturePrice) {
-            throw new IllegalArgumentException("결제 금액이 일치하지 않습니다. (지불 금액: " + paidAmount + ", 예상 금액: " + lecturePrice + ")");
+            throw new IllegalArgumentException(
+                    "결제 금액이 일치하지 않습니다. (지불 금액: " + paidAmount + ", 예상 금액: " + lecturePrice + ")");
         }
 
         // 결제 정보 저장
@@ -126,12 +131,15 @@ public class PaymentService {
                 .name(payment.getName())
                 .amount(payment.getAmount())
                 .currency(payment.getCurrency())
-                .cancelAmount(payment.getCancelAmount() == null ? BigDecimal.ZERO : payment.getCancelAmount())
+                .cancelAmount(payment.getCancelAmount() ==
+                        null ? BigDecimal.ZERO : payment.getCancelAmount())
                 .status(payment.getStatus())
                 .startedAt(convertUnixToLocalDateTime(payment.getStartedAt()))
                 .paidAt(convertDateToLocalDateTime(payment.getPaidAt()))
-                .failedAt(payment.getFailedAt() != null ? convertDateToLocalDateTime(payment.getFailedAt()) : null)
-                .cancelledAt(payment.getCancelledAt() != null ? convertDateToLocalDateTime(payment.getCancelledAt()) : null)
+                .failedAt(payment.getFailedAt() !=
+                        null ? convertDateToLocalDateTime(payment.getFailedAt()) : null)
+                .cancelledAt(payment.getCancelledAt()
+                        != null ? convertDateToLocalDateTime(payment.getCancelledAt()) : null)
                 .failReason(payment.getFailReason())
                 .cancelReason(payment.getCancelReason())
                 .receiptUrl(payment.getReceiptUrl())
@@ -149,7 +157,8 @@ public class PaymentService {
 
     // Unix 타임 (long) -> LocalDateTime 변환 메서드
     private LocalDateTime convertUnixToLocalDateTime(long unixTime) {
-        return LocalDateTime.ofInstant(Instant.ofEpochSecond(unixTime), ZoneId.systemDefault());
+        return LocalDateTime.ofInstant(
+                Instant.ofEpochSecond(unixTime), ZoneId.systemDefault());
     }
 
     // Date -> LocalDateTime 변환 메서드
@@ -171,7 +180,8 @@ public class PaymentService {
                 balanceRepository.save(balance);
 
                 // memberId 통해서 availableMoney 올려주는 이벤트 코드
-                BalanceUpdateDto balanceUpdateDto = new BalanceUpdateDto(balance.getMemberId(), balance.getCost());
+                BalanceUpdateDto balanceUpdateDto = new BalanceUpdateDto(
+                        balance.getMemberId(), balance.getCost());
 
                 // Kafka 전송 비동기 처리 (재시도 포함: 3번까지 전송)
                 sendMessageWithRetry("balance-update-topic", balanceUpdateDto, 3);
@@ -187,7 +197,8 @@ public class PaymentService {
                 .exceptionally(ex -> {
                     if (retryCount > 0) {
                         // 전송 실패 시 재시도
-                        System.err.println("Kafka 전송 실패. 남은 재시도 횟수: " + retryCount + ", 이유: " + ex.getMessage());
+                        System.err.println(
+                                "Kafka 전송 실패. 남은 재시도 횟수: " + retryCount + ", 이유: " + ex.getMessage());
                         sendMessageWithRetry(topic, balanceUpdateDto, retryCount - 1);
                     } else {
                         // 재시도 횟수가 모두 소진된 경우 예외 처리

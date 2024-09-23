@@ -15,6 +15,9 @@ public interface LectureFeign {
     @GetMapping(value = "/lecture/payment/{id}")
     CommonResDto getLectureById(@PathVariable("id") Long lecturePaymentId);
 
+    @PostMapping(value = "/lecture/paid/status")
+    CommonResDto paidStatus(CommonResDto commonResDto);
+
     @PostMapping(value = "/lecture/payment/refund")
     CommonResDto refundStatus(@RequestBody RefundReqDto refundReqDto);
 }
