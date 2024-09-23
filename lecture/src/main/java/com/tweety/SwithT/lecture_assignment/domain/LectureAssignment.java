@@ -3,6 +3,7 @@ package com.tweety.SwithT.lecture_assignment.domain;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.lecture.domain.Lecture;
+import com.tweety.SwithT.lecture.domain.LectureGroup;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -2,6 +2,7 @@ package com.tweety.SwithT.lecture_chat_room.domain;
 
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.lecture.domain.Lecture;
+import com.tweety.SwithT.lecture.domain.LectureGroup;
 import jakarta.persistence.*;
 import jakarta.persistence.JoinColumn;
 import lombok.AllArgsConstructor;
