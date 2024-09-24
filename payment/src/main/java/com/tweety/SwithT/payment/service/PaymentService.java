@@ -14,6 +14,7 @@ import com.tweety.SwithT.payment.domain.Status;
 import com.tweety.SwithT.payment.dto.*;
 import com.tweety.SwithT.payment.repository.BalanceRepository;
 import com.tweety.SwithT.payment.repository.PaymentRepository;
+import feign.FeignException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,7 +82,7 @@ public class PaymentService {
         // 결제 상태 업데이트 요청
         try {
             lectureFeign.paidStatus(returnResDto);
-        } catch (Exception e) {
+        } catch (FeignException e) {
             // Feign 호출 실패 시 롤백 및 예외 처리
             throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, "Feign 통신 중 오류 발생: " + e.getMessage());
