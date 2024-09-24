@@ -2,6 +2,7 @@ package com.tweety.SwithT.lecture.domain;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
+import com.tweety.SwithT.lecture.dto.LectureGroupListResDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,5 +49,6 @@ public class LectureGroup extends BaseTimeEntity {
     @Column(nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
+
 
 }

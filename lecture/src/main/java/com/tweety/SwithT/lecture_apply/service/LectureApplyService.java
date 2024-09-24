@@ -56,7 +56,7 @@ public class LectureApplyService {
         }
         lectureApplyRepository.save(dto.toEntity(lectureGroup, memberId));
 
-        Lecture lecture = lectureRepository.findById(dto.getLectureGroupId()).orElseThrow(()->{
+        Lecture lecture = lectureRepository.findById(lectureGroup.getLecture().getId()).orElseThrow(()->{
             throw new EntityNotFoundException("해당 과외가 존재하지 않습니다.");
         });
 

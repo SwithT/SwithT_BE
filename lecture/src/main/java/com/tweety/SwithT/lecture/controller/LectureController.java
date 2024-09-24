@@ -33,10 +33,21 @@ public class LectureController {
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
 
+    //과외/강의 상세화면
     @GetMapping("/lecture-detail/{id}")
     public ResponseEntity<?> lectureDetail(@PathVariable Long id){
         CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의 안내 화면", lectureService.lectureDetail(id));
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
+
+    //과외/관리 수업 관리 화면
+    @PreAuthorize("hasRole('TUTOR')")
+    @GetMapping("/lecture-class-list/{id}")
+    public ResponseEntity<?> showLectureGroupList(@PathVariable Long id, @RequestParam(value = "isAvailable")String isAvailable, Pageable pageable){
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의/과외 수업 리스트 화면", lectureService.showLectureGroupList(id, isAvailable, pageable));
+        return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+    }
+
+
 
 }
