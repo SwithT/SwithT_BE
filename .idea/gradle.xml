@@ -28,14 +28,6 @@
         </option>
       </GradleProjectSettings>
       <GradleProjectSettings>
-        <option name="externalProjectPath" value="$PROJECT_DIR$/lesson" />
-        <option name="modules">
-          <set>
-            <option value="$PROJECT_DIR$/lesson" />
-          </set>
-        </option>
-      </GradleProjectSettings>
-      <GradleProjectSettings>
         <option name="externalProjectPath" value="$PROJECT_DIR$/member" />
         <option name="modules">
           <set>
