@@ -31,7 +31,7 @@ public class LectureGroup extends BaseTimeEntity {
 
     private Integer price = 0;
 
-    private Integer limit;
+    private Integer limitPeople;
 
     private String latitude;
 
