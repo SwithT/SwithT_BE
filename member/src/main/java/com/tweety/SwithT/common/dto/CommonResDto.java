@@ -12,7 +12,7 @@ public class CommonResDto {
     private Object result;
 
     public CommonResDto(HttpStatus httpStatus, String message, Object result) {
-        this.status_code = httpStatus.value(); // int로 받기위해
+        this.status_code = httpStatus.value();
         this.status_message = message;
         this.result = result;
     }
