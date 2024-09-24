@@ -39,7 +39,7 @@ public class LectureApplyService {
             throw new RuntimeException("해당 과외는 신청할 수 없습니다.");
         }
 
-        List<LectureApply> lectureApplyList = lectureApplyRepository.findByMemberIdAndLectureGroupId(memberId, lectureGroup);
+        List<LectureApply> lectureApplyList = lectureApplyRepository.findByMemberIdAndLectureGroup(memberId, lectureGroup);
         if(!lectureApplyList.isEmpty()){
             int rejectedCount = 0;
             for(LectureApply lectureApply : lectureApplyList){
@@ -53,7 +53,6 @@ public class LectureApplyService {
                     }
                 }
             }
-
         }
         lectureApplyRepository.save(dto.toEntity(lectureGroup, memberId));
 

@@ -10,5 +10,6 @@ import java.util.Optional;
 
 @Repository
 public interface LectureApplyRepository extends JpaRepository<LectureApply, Long> {
-    List<LectureApply> findByMemberIdAndLectureGroupId(Long memberId, LectureGroup lectureGroup);
+
+    List<LectureApply> findByMemberIdAndLectureGroup(Long memberId, LectureGroup lectureGroup);
 }

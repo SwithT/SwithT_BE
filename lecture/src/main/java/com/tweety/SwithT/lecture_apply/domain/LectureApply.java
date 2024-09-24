@@ -4,6 +4,7 @@ import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
+import com.tweety.SwithT.lecture.domain.LectureType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -40,7 +41,7 @@ public class LectureApply extends BaseTimeEntity {
     private String location;
 
     @Builder.Default
+    @Enumerated(EnumType.STRING)
     private Status status = Status.STANDBY;
-
 
 }

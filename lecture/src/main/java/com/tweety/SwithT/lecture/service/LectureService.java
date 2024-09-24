@@ -14,6 +14,7 @@ import jakarta.persistence.criteria.Root;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -36,19 +37,15 @@ public class LectureService {
 
                 List<Predicate> predicates = new ArrayList<>();
                 if(searchDto.getSearchTitle() != null){
-                    System.out.println("이거 왜 안나오는데2\n\n\n\n\n\n\n\n\n\n");
                     predicates.add(criteriaBuilder.like(root.get("title"), "%"+searchDto.getSearchTitle()+"%"));
                 }
                 if(searchDto.getCategory() != null){
-                    System.out.println("이거 왜 안나오는데3\n\n\n\n\n\n\n\n\n\n");
                     predicates.add(criteriaBuilder.like(root.get("category"), "%"+searchDto.getCategory()+"%"));
                 }
                 if(searchDto.getLectureType() != null){
-                    System.out.println("이거 왜 안나오는데4\n\n\n\n\n\n\n\n\n\n");
                     predicates.add(criteriaBuilder.like(root.get("lectureType"), "%"+searchDto.getLectureType()+"%"));
                 }
                 if(searchDto.getStatus() != null){
-                    System.out.println("이거 왜 안나오는데3\n\n\n\n\n\n\n\n\n\n");
                     predicates.add(criteriaBuilder.like(root.get("status"), "%"+searchDto.getStatus()+"%"));
                 }
 
@@ -60,15 +57,44 @@ public class LectureService {
                 return criteriaBuilder.and(predicateArr);
             }
         };
-        System.out.println("이거 왜 안나오는데4\n\n\n\n\n\n\n\n\n\n");
-
         Page<Lecture> lectures = lectureRepository.findAll(specification, pageable);
-        System.out.println("이거 왜 안나오는데5\n\n\n\n\n\n\n\n\n\n");
-
-
 
         return lectures.map(Lecture::fromEntityToLectureListResDto);
     }
 
 
+    public Page<LectureListResDto> showMyLectureList(LectureSearchDto searchDto, Pageable pageable) {
+        Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Specification<Lecture> specification = new Specification<Lecture>() {
+            @Override
+            public Predicate toPredicate(Root<Lecture> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+
+                List<Predicate> predicates = new ArrayList<>();
+                predicates.add(criteriaBuilder.equal(root.get("memberId"), memberId));
+
+                if(searchDto.getSearchTitle() != null){
+                    predicates.add(criteriaBuilder.like(root.get("title"), "%"+searchDto.getSearchTitle()+"%"));
+                }
+                if(searchDto.getCategory() != null){
+                    predicates.add(criteriaBuilder.like(root.get("category"), "%"+searchDto.getCategory()+"%"));
+                }
+                if(searchDto.getLectureType() != null){
+                    predicates.add(criteriaBuilder.like(root.get("lectureType"), "%"+searchDto.getLectureType()+"%"));
+                }
+                if(searchDto.getStatus() != null){
+                    predicates.add(criteriaBuilder.like(root.get("status"), "%"+searchDto.getStatus()+"%"));
+                }
+
+
+                Predicate[] predicateArr = new Predicate[predicates.size()];
+                for(int i=0; i<predicateArr.length; i++){
+                    predicateArr[i] = predicates.get(i);
+                }
+                return criteriaBuilder.and(predicateArr);
+            }
+        };
+        Page<Lecture> lectures = lectureRepository.findAll(specification, pageable);
+
+        return lectures.map(Lecture::fromEntityToLectureListResDto);
+    }
 }
