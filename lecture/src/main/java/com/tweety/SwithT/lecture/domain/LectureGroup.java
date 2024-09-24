@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @AllArgsConstructor
@@ -27,9 +29,9 @@ public class LectureGroup extends BaseTimeEntity {
     private Lecture lecture;
 
     @Column(nullable = false, columnDefinition = "char(1) default 'Y'")
-    private String isAvailable = "Y";
+    private String isAvailable;
 
-    private Integer price = 0;
+    private Integer price;
 
     private Integer limitPeople;
 
@@ -42,5 +44,9 @@ public class LectureGroup extends BaseTimeEntity {
 
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
+
+    @OneToMany(mappedBy = "lectureGroup", cascade = CascadeType.PERSIST)
+    @Builder.Default
+    private List<GroupTime> groupTimes = new ArrayList<>();
 
 }

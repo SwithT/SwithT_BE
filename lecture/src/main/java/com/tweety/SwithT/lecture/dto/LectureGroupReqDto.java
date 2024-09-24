@@ -1,15 +1,22 @@
 package com.tweety.SwithT.lecture.dto;
 
+import com.tweety.SwithT.lecture.domain.GroupTime;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 
 import java.time.LocalDate;
+import java.util.List;
 
+@Getter
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class LectureGroupReqDto {
-    private Long lectureId;
-
-    private String isAvailable;
 
     private Integer price;
 
@@ -23,16 +30,19 @@ public class LectureGroupReqDto {
 
     private LocalDate endDate;
 
+
     public LectureGroup toEntity(Lecture lecture) {
         return LectureGroup.builder()
                 .lecture(lecture)
-                .isAvailable(this.isAvailable)
                 .price(this.price)
-                .limit(this.limit)
+                .isAvailable("Y")
                 .latitude(this.latitude)
                 .longitude(this.longitude)
                 .startDate(this.startDate)
                 .endDate(this.endDate)
                 .build();
     }
+
+    private List<GroupTimeReqDto> groupTimeReqDtos;
+
 }
