@@ -33,7 +33,7 @@ public class LectureGroup extends BaseTimeEntity {
     private Integer price;
 
     @Column(columnDefinition = "integer default 1")
-    private Integer limit_people;
+    private Integer limitPeople;
 
 
 

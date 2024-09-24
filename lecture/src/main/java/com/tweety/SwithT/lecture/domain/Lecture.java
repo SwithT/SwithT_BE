@@ -3,6 +3,7 @@ package com.tweety.SwithT.lecture.domain;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.common.domain.Status;
+import com.tweety.SwithT.lecture.dto.LectureDetailResDto;
 import com.tweety.SwithT.lecture.dto.LectureListResDto;
 import com.tweety.SwithT.lecture_assignment.domain.LectureAssignment;
 import jakarta.persistence.*;
@@ -57,6 +58,18 @@ public class Lecture extends BaseTimeEntity {
                 .memberName(this.memberName)
                 .memberId(this.memberId)
                 .image(this.image)
+                .build();
+    }
+
+    public LectureDetailResDto fromEntityToLectureDetailResDto(){
+        return LectureDetailResDto.builder()
+                .title(this.title)
+                .contents(this.contents)
+                .image(this.image)
+                .status(this.status)
+                .category(this.category)
+                .memberId(this.memberId)
+                .memberName(this.memberName)
                 .build();
     }
 

@@ -3,10 +3,12 @@ package com.tweety.SwithT.lecture.service;
 import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureType;
+import com.tweety.SwithT.lecture.dto.LectureDetailResDto;
 import com.tweety.SwithT.lecture.dto.LectureListResDto;
 import com.tweety.SwithT.lecture.dto.LectureSearchDto;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import com.tweety.SwithT.lecture.repository.LectureRepository;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
@@ -96,5 +98,13 @@ public class LectureService {
         Page<Lecture> lectures = lectureRepository.findAll(specification, pageable);
 
         return lectures.map(Lecture::fromEntityToLectureListResDto);
+    }
+
+    //강의 상세 화면
+    public LectureDetailResDto lectureDetail(Long id) {
+        Lecture lecture = lectureRepository.findById(id).orElseThrow(()->{
+            throw new EntityNotFoundException("해당 id에 맞는 강의가 존재하지 않습니다.");
+        });
+        return lecture.fromEntityToLectureDetailResDto();
     }
 }
