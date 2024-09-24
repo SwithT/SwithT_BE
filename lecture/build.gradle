@@ -28,10 +28,14 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+
 }
 
 ext{
-	set('springCloudVersion', '2021.0.8')
+	set('springCloudVersion', '2023.0.3')
 }
 
 dependencyManagement {
