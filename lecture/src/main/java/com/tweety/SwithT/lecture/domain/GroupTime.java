@@ -26,7 +26,9 @@ public class GroupTime extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private LectureDay lectureDay;
 
+    @Column(nullable = false)
     private LocalTime startTime;
 
+    @Column(nullable = false)
     private LocalTime endTime;
 }
