@@ -3,6 +3,8 @@ package com.tweety.SwithT.lecture.domain;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.common.domain.Status;
+import com.tweety.SwithT.lecture.dto.LectureDetailResDto;
+import com.tweety.SwithT.lecture.dto.LectureListResDto;
 import com.tweety.SwithT.lecture_assignment.domain.LectureAssignment;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -26,6 +28,8 @@ public class Lecture extends BaseTimeEntity {
 
     private Long memberId;
 
+    private String memberName;
+
     @Column(nullable = false)
     private String title;
 
@@ -40,6 +44,34 @@ public class Lecture extends BaseTimeEntity {
 
     @Enumerated(EnumType.STRING)
     private Category category;
+
+    @Enumerated(EnumType.STRING)
+    private LectureType lectureType;
+
+
+
+
+    public LectureListResDto fromEntityToLectureListResDto(){
+        return LectureListResDto.builder()
+                .id(this.id)
+                .title(this.title)
+                .memberName(this.memberName)
+                .memberId(this.memberId)
+                .image(this.image)
+                .build();
+    }
+
+    public LectureDetailResDto fromEntityToLectureDetailResDto(){
+        return LectureDetailResDto.builder()
+                .title(this.title)
+                .contents(this.contents)
+                .image(this.image)
+                .status(this.status)
+                .category(this.category)
+                .memberId(this.memberId)
+                .memberName(this.memberName)
+                .build();
+    }
 
 
 

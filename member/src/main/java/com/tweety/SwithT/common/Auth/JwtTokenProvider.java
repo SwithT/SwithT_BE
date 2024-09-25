@@ -27,11 +27,12 @@ public class JwtTokenProvider {
 	@Value("${jwt.expirationRt}")
 	private int expirationRt;
 
-	public String createToken(String id, String email, String role) {
+	public String createToken(String id, String email, String role,String name) {
 
-		Claims claims = Jwts.claims().setSubject(email);
-		claims.put("id", id);  // 사용자 ID 추가
+		Claims claims = Jwts.claims().setSubject(id);
+		claims.put("email", email);  // 사용자 ID 추가
 		claims.put("role", role);
+		claims.put("name", name);
 
 		Date now = new Date();
 		String token = Jwts.builder()
@@ -43,10 +44,12 @@ public class JwtTokenProvider {
 		return token;
 	}
 
-	public String createRefreshToken(String id, String email, String role) {
-		Claims claims = Jwts.claims().setSubject(email);
-		claims.put("id", id);  // 사용자 ID 추가
+	public String createRefreshToken(String id, String email, String role,String name) {
+
+		Claims claims = Jwts.claims().setSubject(id);
+		claims.put("email", email);  // 사용자 ID 추가
 		claims.put("role", role);
+		claims.put("name", name);
 
 		Date now = new Date();
 		String token = Jwts.builder()
@@ -59,12 +62,14 @@ public class JwtTokenProvider {
 	}
 
 	public Authentication getAuthentication(String token) {
+
 		Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
 
 		List<GrantedAuthority> authorities = new ArrayList<>();
 		authorities.add(new SimpleGrantedAuthority("ROLE_" + claims.get("role")));
 		UserDetails userDetails = new User(claims.getSubject(), "", authorities);
 		return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
+
 	}
 
 	public boolean validateToken(String token) {
@@ -78,3 +83,4 @@ public class JwtTokenProvider {
 	}
 
 }
+

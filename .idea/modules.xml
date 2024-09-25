@@ -3,12 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/SwithT_BE.iml" filepath="$PROJECT_DIR$/.idea/SwithT_BE.iml" />
-
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/eureka.main.iml" filepath="$PROJECT_DIR$/.idea/modules/eureka.main.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/gateway.main.iml" filepath="$PROJECT_DIR$/.idea/modules/gateway.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/lesson.main.iml" filepath="$PROJECT_DIR$/.idea/modules/lesson.main.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/member.main.iml" filepath="$PROJECT_DIR$/.idea/modules/member.main.iml" />
-
     </modules>
   </component>
 </project>

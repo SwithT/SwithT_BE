@@ -51,11 +51,15 @@ public class JwtAuthFilter extends GenericFilter {
                 Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
                 List<GrantedAuthority> authorities = new ArrayList<>();
                 authorities.add(new SimpleGrantedAuthority("ROLE_" + claims.get("role")));
+
                 UserDetails userDetails = new User(claims.getSubject(), "", authorities);
                 Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
+
             filterChain.doFilter(servletRequest, servletResponse);
+
+
         } catch (SecurityException e) {
             log.error(e.getMessage());
             HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
