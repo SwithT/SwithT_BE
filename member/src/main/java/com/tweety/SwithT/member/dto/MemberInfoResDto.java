@@ -7,19 +7,20 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class MemberUpdateDto {
+public class MemberInfoResDto {
 
-    //수정 페이지
+    //마이 페이지
     private String profileImage;
+    //private String nickName; 닉네임 미사용으로 주석 처리.
     private String name;
     private LocalDate birthday;
-    private String gender;
+    private Gender gender;
     private String address;
+    private String email;
     private String phoneNumber;
     //튜터 필드
     private String education;

@@ -14,7 +14,8 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @NoArgsConstructor
 public class MemberListResDto {
-    //회원 리스트 조회
+
+    //회원 리스트 전체 조회
     private Long id;
     private String email;
     private String name;

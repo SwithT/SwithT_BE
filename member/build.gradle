@@ -22,7 +22,7 @@ ext{
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+//	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -36,9 +36,12 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'io.jsonwebtoken:jjwt:0.9.1'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
 //  doLogin 관련 의존성 자바 17로 넘어오면서 추가해야 doLogin 에서 문제 안 생김.
 	implementation 'javax.xml.bind:jaxb-api:2.3.1'
 	implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
+//	AWS S3 의존성 추가
+	implementation 'software.amazon.awssdk:s3:2.17.58'
 }
 
 dependencyManagement {
