@@ -128,7 +128,6 @@ public class LectureService {
         Specification<LectureGroup> specification = new Specification<LectureGroup>() {
             @Override
             public Predicate toPredicate(Root<LectureGroup> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-
                 List<Predicate> predicates = new ArrayList<>();
                 predicates.add(criteriaBuilder.equal(root.get("lecture"), lecture));
 
@@ -161,6 +160,5 @@ public class LectureService {
         });
 
         return lectureGroupResDtos;
-
     }
 }

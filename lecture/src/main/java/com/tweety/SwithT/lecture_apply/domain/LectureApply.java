@@ -31,6 +31,10 @@ public class LectureApply extends BaseTimeEntity {
     @Column(nullable = false)
     private Long memberId;
 
+    //신청한 튜티의 이름
+    @Column(nullable = false)
+    private String memberName;
+
     @Column(nullable = true)
     private LocalDate startDate;
 

@@ -67,10 +67,10 @@ public class MemberController {
 
         // AccesToken
         String jwtToken =
-                jwtTokenProvider.createToken(String.valueOf(member.getId()),member.getEmail(), member.getRole().toString());
+                jwtTokenProvider.createToken(String.valueOf(member.getId()),member.getEmail(), member.getRole().toString(),member.getName());
         // RefreshToken
         String refreshToken =
-                jwtTokenProvider.createRefreshToken(String.valueOf(member.getId()),member.getEmail(), member.getRole().toString());
+                jwtTokenProvider.createRefreshToken(String.valueOf(member.getId()),member.getEmail(), member.getRole().toString(),member.getName());
 
         redisTemplate.opsForValue().set(member.getEmail(), refreshToken, 240, TimeUnit.HOURS); // 240시간
 
@@ -84,6 +84,7 @@ public class MemberController {
         // 로그 출력
         System.out.println("ID: " + member.getId());
         System.out.println("Email: " + member.getEmail());
+        System.out.println("name: " + member.getName());
         System.out.println("Role: " + member.getRole().toString());
         System.out.println("Access Token: " + jwtToken);
         System.out.println("Refresh Token: " + refreshToken);
@@ -104,16 +105,18 @@ public class MemberController {
                     new CommonErrorDto(HttpStatus.BAD_REQUEST.value(), "invalid refresh Token"), HttpStatus.BAD_REQUEST);
         }
 
-        String id = claims.getId();
-        String email = claims.getSubject();
+        String id = claims.getSubject();
+        String email = claims.get("email").toString();
         String role = claims.get("role").toString();
+        String name = claims.get("name").toString();
+
 
         Object obj = redisTemplate.opsForValue().get(email);
         if ( obj == null || !obj.toString().equals(rt)){
             return new ResponseEntity<>(
                     new CommonErrorDto(HttpStatus.BAD_REQUEST.value(), "invalid refresh Token"), HttpStatus.BAD_REQUEST);
         }
-        String newAt = jwtTokenProvider.createToken(id,email, role);
+        String newAt = jwtTokenProvider.createToken(id,email, role,name);
         Map<String, Object> info = new HashMap<>();
         info.put("token", newAt);
 

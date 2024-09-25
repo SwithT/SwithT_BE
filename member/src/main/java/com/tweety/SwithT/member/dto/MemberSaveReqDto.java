@@ -21,8 +21,8 @@ public class MemberSaveReqDto {
     @NotEmpty(message = "이름은 필수 작성 항목 입니다.")
     private String name;
 
-    @NotEmpty(message = "닉네임은 필수 작성 항목 입니다")
-    private String nickName;
+//    @NotEmpty(message = "닉네임은 필수 작성 항목 입니다")
+//    private String nickName;
 
     @NotEmpty(message = "이메일은 필수 작성 항목 입니다.")
     @Email(message = "이메일 형식이 유효하지 않습니다.")
