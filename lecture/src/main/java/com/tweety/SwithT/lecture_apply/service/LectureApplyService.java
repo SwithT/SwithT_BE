@@ -9,10 +9,15 @@ import com.tweety.SwithT.lecture_apply.domain.LectureApply;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplyAfterResDto;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplySavedDto;
 import com.tweety.SwithT.lecture_apply.repository.LectureApplyRepository;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
+
 
 import java.util.List;
 
@@ -28,10 +33,17 @@ public class LectureApplyService {
         this.lectureRepository = lectureRepository;
     }
 
+    @Value("${jwt.secretKey}")
+    private String secretKey;
+
     //튜티가 과외 신청
     @Transactional
     public SingleLectureApplyAfterResDto tuteeSingleLectureApply(SingleLectureApplySavedDto dto) {
         Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        String token = ((UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication()).getCredentials().toString();
+        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+        String memberName = (String) claims.get("name");
+
         LectureGroup lectureGroup = lectureGroupRepository.findById(dto.getLectureGroupId()).orElseThrow(()->{
             throw new EntityNotFoundException("해당 과외는 존재하지 않습니다.");
         });
@@ -54,7 +66,7 @@ public class LectureApplyService {
                 }
             }
         }
-        lectureApplyRepository.save(dto.toEntity(lectureGroup, memberId));
+        lectureApplyRepository.save(dto.toEntity(lectureGroup, memberId, memberName));
 
         Lecture lecture = lectureRepository.findById(lectureGroup.getLecture().getId()).orElseThrow(()->{
             throw new EntityNotFoundException("해당 과외가 존재하지 않습니다.");

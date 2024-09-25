@@ -26,10 +26,11 @@ public class SingleLectureApplySavedDto {
 
     private String location;
 
-    public LectureApply toEntity(LectureGroup lectureGroup, Long memberId){
+    public LectureApply toEntity(LectureGroup lectureGroup, Long memberId, String memberName){
         return LectureApply.builder()
                 .lectureGroup(lectureGroup)
                 .memberId(memberId)
+                .memberName(memberName)
                 .startDate(this.startDate)
                 .endDate(this.endDate)
                 .status(Status.STANDBY)
