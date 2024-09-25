@@ -37,7 +37,6 @@ public class CommentService {
 
     // 댓글 생성
     public CommentCreateResponse commentCreate(HttpServletRequest request, Long id, CommentCreateRequest dto){
-        System.out.println("push를 위한 print");
         // member 이름 claim에서 가져옴
         String bearerToken = request.getHeader("Authorization");
         String token = bearerToken.substring(7);
