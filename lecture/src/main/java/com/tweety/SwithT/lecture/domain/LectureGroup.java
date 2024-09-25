@@ -11,6 +11,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @AllArgsConstructor
@@ -36,19 +38,18 @@ public class LectureGroup extends BaseTimeEntity {
     @Column(columnDefinition = "integer default 1")
     private Integer limitPeople;
 
-
-
     private String latitude;
 
     private String longitude;
 
-    @Column(nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
-    @Column(nullable = true)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
+    @OneToMany(mappedBy = "lectureGroup", cascade = CascadeType.PERSIST)
+    @Builder.Default
+    private List<GroupTime> groupTimes = new ArrayList<>();
 
 }

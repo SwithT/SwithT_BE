@@ -1,22 +1,31 @@
 package com.tweety.SwithT.lecture.controller;
 
-import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.common.dto.CommonResDto;
-import com.tweety.SwithT.lecture.domain.LectureType;
-import com.tweety.SwithT.lecture.dto.LectureSearchDto;
+import com.tweety.SwithT.lecture.domain.Lecture;
+import com.tweety.SwithT.lecture.dto.*;
 import com.tweety.SwithT.lecture.service.LectureService;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import com.tweety.SwithT.lecture.dto.LectureSearchDto;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 
 @RestController
 @RequiredArgsConstructor
 public class LectureController {
 
     private final LectureService lectureService;
+
+    // 강의 Or 과외 생성
+    @PreAuthorize("hasRole('TUTOR')")
+    @PostMapping("/create")
+    public ResponseEntity<Object> lectureCreate(@RequestBody CreateReqDto lectureCreateDto) {
+        Lecture lecture = lectureService.lectureCreate(lectureCreateDto.getLectureReqDto(), lectureCreateDto.getLectureGroupReqDtos());
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "Lecture is successfully created", lecture.getId());
+        return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+    }
 
     //과외 또는 강의 리스트
     @GetMapping("/list-of-lecture")

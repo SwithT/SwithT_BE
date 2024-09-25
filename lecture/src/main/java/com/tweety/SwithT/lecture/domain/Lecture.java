@@ -49,8 +49,6 @@ public class Lecture extends BaseTimeEntity {
     private LectureType lectureType;
 
 
-
-
     public LectureListResDto fromEntityToLectureListResDto(){
         return LectureListResDto.builder()
                 .id(this.id)
@@ -74,5 +72,11 @@ public class Lecture extends BaseTimeEntity {
     }
 
 
+    // lecture에서 lectureGroup을 접근하기 위한 변수
+    // lecture.getLectureGroups() => 리턴타입 List
+    @OneToMany(mappedBy = "lecture", cascade = CascadeType.PERSIST)
+    // @Builder.Default : 빌더 패턴에서도 ArrayList로 초기화 되도록하는 설정
+    @Builder.Default
+    private List<LectureGroup> lectureGroups = new ArrayList<>();
 
 }

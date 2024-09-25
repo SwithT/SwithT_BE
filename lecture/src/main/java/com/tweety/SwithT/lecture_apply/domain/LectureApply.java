@@ -48,4 +48,5 @@ public class LectureApply extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private Status status = Status.STANDBY;
 
+
 }

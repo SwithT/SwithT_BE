@@ -44,6 +44,7 @@ spring:
             - StripPrefix=1
           uri: lb://lecture-service
 
+
 eureka:
   client:
     serviceUrl:

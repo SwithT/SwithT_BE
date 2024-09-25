@@ -1,5 +1,13 @@
 package com.tweety.SwithT.lecture.service;
 
+import com.tweety.SwithT.lecture.domain.Lecture;
+import com.tweety.SwithT.lecture.domain.LectureGroup;
+import com.tweety.SwithT.lecture.dto.*;
+import com.tweety.SwithT.lecture.repository.GroupTimeRepository;
+import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
+import com.tweety.SwithT.lecture.repository.LectureRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import com.tweety.SwithT.lecture.domain.GroupTime;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
@@ -21,23 +29,51 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class LectureService {
     private final LectureRepository lectureRepository;
     private final LectureGroupRepository lectureGroupRepository;
     private final GroupTimeRepository groupTimeRepository;
     private final LectureApplyRepository lectureApplyRepository;
 
-    public LectureService(LectureRepository lectureRepository, LectureGroupRepository lectureGroupRepository, GroupTimeRepository groupTimeRepository, LectureApplyRepository lectureApplyRepository) {
-        this.lectureRepository = lectureRepository;
-        this.lectureGroupRepository = lectureGroupRepository;
-        this.groupTimeRepository = groupTimeRepository;
-        this.lectureApplyRepository = lectureApplyRepository;
+    // Create
+    @Transactional
+    public Lecture lectureCreate(LectureCreateReqDto lectureCreateReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
+        Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+
+        // Lecture 정보 저장
+        Lecture createdLecture = lectureRepository.save(lectureCreateReqDto.toEntity(memberId));
+
+        for (LectureGroupReqDto groupDto : lectureGroupReqDtos){
+            // Lecture Group 정보 저장
+            LectureGroup createdGroup = lectureGroupRepository.save(groupDto.toEntity(createdLecture));
+            System.out.println(createdGroup.getId());
+            for (GroupTimeReqDto timeDto : groupDto.getGroupTimeReqDtos()){
+                System.out.println(timeDto.getEndTime());
+                System.out.println(timeDto.getStartTime());
+                groupTimeRepository.save(timeDto.toEntity(createdGroup));
+            }
+        }
+
+        return createdLecture;
     }
+
+
+    // Update: limitPeople=0
+//    public void lectureUpdate(LectureUpdateReqDto lectureUpdateReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
+//        Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+//        if (memberId == )
+//    }
+
+    // Delete: role=TUTOR & limitPeople=0
+
+
 
     public Page<LectureListResDto> showLectureList(LectureSearchDto searchDto, Pageable pageable) {
         Specification<Lecture> specification = new Specification<Lecture>() {
@@ -85,13 +121,13 @@ public class LectureService {
                     predicates.add(criteriaBuilder.like(root.get("title"), "%"+searchDto.getSearchTitle()+"%"));
                 }
                 if(searchDto.getCategory() != null){
-                    predicates.add(criteriaBuilder.like(root.get("category"), "%"+searchDto.getCategory()+"%"));
+                    predicates.add(criteriaBuilder.like(root.get("category"), "%" + searchDto.getCategory() + "%"));
                 }
-                if(searchDto.getLectureType() != null){
-                    predicates.add(criteriaBuilder.like(root.get("lectureType"), "%"+searchDto.getLectureType()+"%"));
+                if (searchDto.getLectureType() != null) {
+                    predicates.add(criteriaBuilder.like(root.get("lectureType"), "%" + searchDto.getLectureType() + "%"));
                 }
-                if(searchDto.getStatus() != null){
-                    predicates.add(criteriaBuilder.like(root.get("status"), "%"+searchDto.getStatus()+"%"));
+                if (searchDto.getStatus() != null) {
+                    predicates.add(criteriaBuilder.like(root.get("status"), "%" + searchDto.getStatus() + "%"));
                 }
 
 
@@ -125,40 +161,40 @@ public class LectureService {
             throw new IllegalArgumentException("로그인한 유저는 해당 과외의 튜터가 아닙니다.");
         }
 
-        Specification<LectureGroup> specification = new Specification<LectureGroup>() {
-            @Override
-            public Predicate toPredicate(Root<LectureGroup> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                List<Predicate> predicates = new ArrayList<>();
-                predicates.add(criteriaBuilder.equal(root.get("lecture"), lecture));
+    Specification<LectureGroup> specification = new Specification<LectureGroup>() {
+        @Override
+        public Predicate toPredicate(Root<LectureGroup> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(criteriaBuilder.equal(root.get("lecture"), lecture));
 
-                if(isAvailable != null && !isAvailable.isEmpty()){
-                    predicates.add(criteriaBuilder.equal(root.get("isAvailable"), isAvailable));
-                }
-                Predicate[] predicateArr = new Predicate[predicates.size()];
-                for(int i=0; i<predicateArr.length; i++){
-                    predicateArr[i] = predicates.get(i);
-                }
-                return criteriaBuilder.and(predicateArr);
+            if(isAvailable != null && !isAvailable.isEmpty()){
+                predicates.add(criteriaBuilder.equal(root.get("isAvailable"), isAvailable));
             }
-        };
-        Page<LectureGroup> lectureGroups = lectureGroupRepository.findAll(specification, pageable);
-        Page<LectureGroupListResDto> lectureGroupResDtos = lectureGroups.map((a)->{
-            List<GroupTime> groupTimeList = groupTimeRepository.findByLectureGroupId(a.getId());
-            StringBuilder groupTitle = new StringBuilder();
-            for(GroupTime groupTime : groupTimeList){
-                groupTitle.append(groupTime.getLectureDay()+" "+groupTime.getStartTime()+"-"+groupTime.getEndTime()+"  /  ");
+            Predicate[] predicateArr = new Predicate[predicates.size()];
+            for(int i=0; i<predicateArr.length; i++){
+                predicateArr[i] = predicates.get(i);
             }
+            return criteriaBuilder.and(predicateArr);
+        }
+    };
+    Page<LectureGroup> lectureGroups = lectureGroupRepository.findAll(specification, pageable);
+    Page<LectureGroupListResDto> lectureGroupResDtos = lectureGroups.map((a)->{
+        List<GroupTime> groupTimeList = groupTimeRepository.findByLectureGroupId(a.getId());
+        StringBuilder groupTitle = new StringBuilder();
+        for(GroupTime groupTime : groupTimeList){
+            groupTitle.append(groupTime.getLectureDay()+" "+groupTime.getStartTime()+"-"+groupTime.getEndTime()+"  /  ");
+        }
 
-            if (groupTitle.length() > 0) {
-                groupTitle.setLength(groupTitle.length() - 5);
-            }
+        if (groupTitle.length() > 0) {
+            groupTitle.setLength(groupTitle.length() - 5);
+        }
 
-            return LectureGroupListResDto.builder()
-                    .title(groupTitle.toString())
-                    .lectureGroupId(a.getId())
-                    .build();
-        });
+        return LectureGroupListResDto.builder()
+                .title(groupTitle.toString())
+                .lectureGroupId(a.getId())
+                .build();
+    });
 
-        return lectureGroupResDtos;
-    }
+    return lectureGroupResDtos;
+}
 }

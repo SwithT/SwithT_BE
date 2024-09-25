@@ -10,6 +10,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface LectureRepository extends JpaRepository<Lecture, Long> {
 
-
     Page<Lecture> findAll(Specification<Lecture> specification, Pageable pageable);
 }
