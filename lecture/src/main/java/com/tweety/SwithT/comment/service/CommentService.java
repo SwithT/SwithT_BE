@@ -1,5 +1,6 @@
 package com.tweety.SwithT.comment.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tweety.SwithT.board.domain.Board;
 import com.tweety.SwithT.board.repository.BoardRepository;
 import com.tweety.SwithT.comment.domain.Comment;
@@ -10,6 +11,9 @@ import com.tweety.SwithT.comment.dto.read.CommentListResponse;
 import com.tweety.SwithT.comment.dto.update.CommentUpdateRequest;
 import com.tweety.SwithT.comment.dto.update.CommentUpdateResponse;
 import com.tweety.SwithT.comment.repository.CommentRepository;
+import com.tweety.SwithT.common.dto.CommonResDto;
+import com.tweety.SwithT.common.service.MemberFeign;
+import com.tweety.SwithT.lecture.dto.MemberNameResDto;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.persistence.EntityNotFoundException;
@@ -28,25 +32,24 @@ import org.springframework.stereotype.Service;
 public class CommentService {
     private final CommentRepository commentRepository;
     private final BoardRepository boardRepository;
+    private final MemberFeign memberFeign;
     @Value("${jwt.secretKey}")
     private String secretKey;
-    public CommentService(CommentRepository commentRepository, BoardRepository boardRepository) {
+    public CommentService(CommentRepository commentRepository, BoardRepository boardRepository, MemberFeign memberFeign) {
         this.commentRepository = commentRepository;
         this.boardRepository = boardRepository;
+        this.memberFeign = memberFeign;
     }
 
     // 댓글 생성
-    public CommentCreateResponse commentCreate(HttpServletRequest request, Long id, CommentCreateRequest dto){
-        // member 이름 claim에서 가져옴
-        String bearerToken = request.getHeader("Authorization");
-        String token = bearerToken.substring(7);
-        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
-        String memberName = claims.get("name",String.class);
-
-        // member id SecurityContextHolder에서 받아옴
-        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        UserDetails userDetails = (UserDetails)principal;
-        Long memberId = Long.valueOf(userDetails.getUsername());
+    public CommentCreateResponse commentCreate( Long id, CommentCreateRequest dto){
+        // securityContextHolder에서 member id 가져옴
+        Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        // feign으로 member 이름 가져옴
+        CommonResDto commonResDto = memberFeign.getMemberNameById(memberId);
+        ObjectMapper objectMapper = new ObjectMapper();
+        MemberNameResDto memberNameResDto = objectMapper.convertValue(commonResDto.getResult(), MemberNameResDto.class);
+        String memberName = memberNameResDto.getName();
 
         Board board = boardRepository.findById(id).orElseThrow(()-> new EntityNotFoundException("해당 게시글이 없습니다"));
 
@@ -64,6 +67,11 @@ public class CommentService {
     @Transactional
     public CommentUpdateResponse commentUpdate(Long id, CommentUpdateRequest dto){
         Comment comment = commentRepository.findById(id).orElseThrow(()->new EntityNotFoundException("해당 댓글이 없습니다"));
+
+        //작성자 확인
+        Long loginMemberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        if(!comment.getMemberId().equals(loginMemberId)) throw new RuntimeException("해당 댓글을 작성한 회원만 수정이 가능합니다.");
+
         comment.updateComment(dto);
         return CommentUpdateResponse.fromEntity(comment);
     }
@@ -71,6 +79,11 @@ public class CommentService {
     // 댓글 삭제
     public CommentDeleteResponse commentDelete(Long id){
         Comment comment = commentRepository.findById(id).orElseThrow(()->new EntityNotFoundException("해당 댓글이 없습니다"));
+
+        //작성자 확인
+        Long loginMemberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        if(!comment.getMemberId().equals(loginMemberId)) throw new RuntimeException("해당 댓글을 작성한 회원만 수정이 가능합니다.");
+
         comment.updateDelYn();
         return CommentDeleteResponse.fromEntity(comment);
     }
