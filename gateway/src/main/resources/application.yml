@@ -44,12 +44,6 @@ spring:
             - StripPrefix=1
           uri: lb://lecture-service
 
-        - id: lesson-service
-          predicates:
-            - Path=/lesson-service/**
-          filters:
-            - StripPrefix=1
-          uri: lb://lesson-service
 
 eureka:
   client:

@@ -1,10 +1,4 @@
-server:
-  port: 0
 spring:
-  application:
-    name: lecture-service
+  profiles:
+    active: local # default
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/

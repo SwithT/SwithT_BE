@@ -51,20 +51,18 @@ public class Member extends BaseTimeEntity {
     @Column(nullable = true)
     private String profileImage;
 
-    //튜터 컬럼, 자기소개 컬럼 추가
-    @Column(nullable = true)
-    private String introduce;
     //튜터 컬럼
     @Column(nullable = true)
     private String education;
+
     //튜터 컬럼
-    @Builder.Default
     @Column(precision = 2, scale = 1, nullable = true)
     private BigDecimal avgScore = BigDecimal.valueOf(0.0);
+
     //튜터 컬럼
-    @Builder.Default
     @Column(nullable = true)
     Long availableMoney = 0L;
+
     // default MAN으로 설정
     @Enumerated(EnumType.STRING)
     @Builder.Default
@@ -74,6 +72,7 @@ public class Member extends BaseTimeEntity {
     @Builder.Default
     @Column(nullable = false)
     private Role role = Role.TUTEE;
+
 
     // schedulers 연관관계
     @OneToMany(mappedBy = "member", cascade = CascadeType.PERSIST)
