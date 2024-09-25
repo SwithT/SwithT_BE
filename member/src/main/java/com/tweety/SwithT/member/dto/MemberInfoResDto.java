@@ -1,10 +1,6 @@
 package com.tweety.SwithT.member.dto;
 
-import com.tweety.SwithT.member.domain.Role;
-import jakarta.annotation.Nullable;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import com.tweety.SwithT.member.domain.Gender;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,17 +11,20 @@ import java.time.LocalDate;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class MemberDetResDto {
+public class MemberInfoResDto {
 
     //마이 페이지
     private String profileImage;
-    private String nickName;
+    //private String nickName; 닉네임 미사용으로 주석 처리.
     private String name;
     private LocalDate birthday;
-    private String gender;
+    private Gender gender;
     private String address;
+    private String email;
     private String phoneNumber;
-    //튜터만 보여줄 필드
+    //튜터 필드
     private String education;
+    //튜터 필드
+    private String introduce;
 
 }
