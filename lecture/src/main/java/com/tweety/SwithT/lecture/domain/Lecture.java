@@ -2,7 +2,6 @@ package com.tweety.SwithT.lecture.domain;
 
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.common.domain.Status;
-import com.tweety.SwithT.lecture.dto.LectureResDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

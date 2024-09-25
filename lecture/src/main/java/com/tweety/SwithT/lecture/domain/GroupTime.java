@@ -19,12 +19,14 @@ public class GroupTime extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "lecture_group_id")
+    private LectureGroup lectureGroup;
+
     @Enumerated(EnumType.STRING)
     private LectureDay lectureDay;
 
-    @Column(nullable = false)
     private LocalTime startTime;
 
-    @Column(nullable = false)
     private LocalTime endTime;
 }

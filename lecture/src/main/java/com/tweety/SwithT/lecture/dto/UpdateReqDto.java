@@ -2,16 +2,18 @@ package com.tweety.SwithT.lecture.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-@Getter
+@Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
-public class CreateReqDto {
-    private LectureCreateReqDto lectureReqDto;
+@AllArgsConstructor
+public class UpdateReqDto {
+
+    private LectureUpdateReqDto lectureUpdateReqDto;
     private List<LectureGroupReqDto> lectureGroupReqDtos;
+
 }

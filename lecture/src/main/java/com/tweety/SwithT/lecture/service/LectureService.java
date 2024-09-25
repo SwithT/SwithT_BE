@@ -25,11 +25,11 @@ public class LectureService {
 
     // Create
     @Transactional
-    public Lecture lectureCreate(LectureReqDto lectureReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
+    public Lecture lectureCreate(LectureCreateReqDto lectureCreateReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
         Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
 
         // Lecture 정보 저장
-        Lecture createdLecture = lectureRepository.save(lectureReqDto.toEntity(memberId));
+        Lecture createdLecture = lectureRepository.save(lectureCreateReqDto.toEntity(memberId));
 
         for (LectureGroupReqDto groupDto : lectureGroupReqDtos){
             // Lecture Group 정보 저장
@@ -46,12 +46,10 @@ public class LectureService {
     }
 
 
-    // 내 강의/과외 목록
-
-
-    // Update: role=TUTOR & limitPeople=0
-    public void lectureUpdate(LectureUpdateReqDto dto){
-
+    // Update: limitPeople=0
+    public void lectureUpdate(LectureUpdateReqDto lectureUpdateReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
+        Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+        if (memberId == )
     }
 
     // Delete: role=TUTOR & limitPeople=0

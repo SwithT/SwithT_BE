@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class LectureReqDto {
+public class LectureCreateReqDto {
 //    private Long memberId;
     private String memberName;
     // 강의 제목
