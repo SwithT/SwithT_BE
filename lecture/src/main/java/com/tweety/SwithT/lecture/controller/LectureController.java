@@ -21,7 +21,7 @@ public class LectureController {
     // 강의 Or 과외 생성
     @PreAuthorize("hasRole('TUTOR')")
     @PostMapping("/create")
-    public ResponseEntity<Object> lectureCreate(@RequestBody LectureCreateReqDto lectureCreateDto) {
+    public ResponseEntity<Object> lectureCreate(@RequestBody CreateReqDto lectureCreateDto) {
         Lecture lecture = lectureService.lectureCreate(lectureCreateDto.getLectureReqDto(), lectureCreateDto.getLectureGroupReqDtos());
         CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "Lecture is successfully created", lecture.getId());
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);

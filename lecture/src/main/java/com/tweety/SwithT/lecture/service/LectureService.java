@@ -66,10 +66,10 @@ public class LectureService {
 
 
     // Update: limitPeople=0
-    public void lectureUpdate(LectureUpdateReqDto lectureUpdateReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
-        Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
-        if (memberId == )
-    }
+//    public void lectureUpdate(LectureUpdateReqDto lectureUpdateReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
+//        Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+//        if (memberId == )
+//    }
 
     // Delete: role=TUTOR & limitPeople=0
 
