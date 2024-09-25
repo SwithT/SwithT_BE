@@ -10,5 +10,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface BoardRepository extends JpaRepository<Board, Long> {
+    // Todo : querydsl 적용 필요
     Page<Board> findAllByLectureGroupId(Long lectureGroupId,Pageable pageable);
 }
