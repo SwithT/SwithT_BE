@@ -1,18 +1,19 @@
 package com.tweety.SwithT.lecture_apply.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tweety.SwithT.common.domain.Status;
+import com.tweety.SwithT.common.dto.CommonResDto;
+import com.tweety.SwithT.common.service.MemberFeign;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
+import com.tweety.SwithT.lecture.dto.MemberNameResDto;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import com.tweety.SwithT.lecture.repository.LectureRepository;
 import com.tweety.SwithT.lecture_apply.domain.LectureApply;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplyAfterResDto;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplySavedDto;
 import com.tweety.SwithT.lecture_apply.repository.LectureApplyRepository;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 import jakarta.persistence.EntityNotFoundException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +27,13 @@ public class LectureApplyService {
     private final LectureGroupRepository lectureGroupRepository;
     private final LectureApplyRepository lectureApplyRepository;
     private final LectureRepository lectureRepository;
+    private final MemberFeign memberFeign;
 
-    public LectureApplyService(LectureGroupRepository lectureGroupRepository, LectureApplyRepository lectureApplyRepository, LectureRepository lectureRepository) {
+    public LectureApplyService(LectureGroupRepository lectureGroupRepository, LectureApplyRepository lectureApplyRepository, LectureRepository lectureRepository, MemberFeign memberFeign) {
         this.lectureGroupRepository = lectureGroupRepository;
         this.lectureApplyRepository = lectureApplyRepository;
         this.lectureRepository = lectureRepository;
+        this.memberFeign = memberFeign;
     }
 
     @Value("${jwt.secretKey}")
@@ -40,9 +43,14 @@ public class LectureApplyService {
     @Transactional
     public SingleLectureApplyAfterResDto tuteeSingleLectureApply(SingleLectureApplySavedDto dto) {
         Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        String token = ((UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication()).getCredentials().toString();
-        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
-        String memberName = (String) claims.get("name");
+//        String token = ((UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication()).getCredentials().toString();
+//        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
+//        String memberName = (String) claims.get("name");
+        CommonResDto commonResDto = memberFeign.getMemberNameById(memberId);
+        ObjectMapper objectMapper = new ObjectMapper();
+        MemberNameResDto memberNameResDto = objectMapper.convertValue(commonResDto.getResult(), MemberNameResDto.class);
+        String memberName = memberNameResDto.getName();
+
 
         LectureGroup lectureGroup = lectureGroupRepository.findById(dto.getLectureGroupId()).orElseThrow(()->{
             throw new EntityNotFoundException("해당 과외는 존재하지 않습니다.");

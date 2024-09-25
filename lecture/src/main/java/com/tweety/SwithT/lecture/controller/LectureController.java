@@ -48,7 +48,7 @@ public class LectureController {
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
 
-    //과외 신청자 리스트
+//    과외 신청자 리스트
 //    @PreAuthorize("hasRole('TUTOR')")
 //    @GetMapping("/single-lecture-apply-list")
 //    public ResponseEntity<?> showSingleLectureApplyList

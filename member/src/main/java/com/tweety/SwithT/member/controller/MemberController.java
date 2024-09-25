@@ -164,6 +164,13 @@ public class MemberController {
     }
 
 
+    @GetMapping("/member-name-get/{id}")
+    public ResponseEntity<?> getMemberNameById(@PathVariable("id")Long id){
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "로그인한 멤버의 이름", memberService.memberNameGet(id));
+        return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+    }
+
+
 
 
 
