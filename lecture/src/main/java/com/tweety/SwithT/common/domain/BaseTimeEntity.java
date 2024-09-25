@@ -20,4 +20,8 @@ public class BaseTimeEntity {
 
     @Column(nullable = false, columnDefinition = "char(1) default 'N'")
     private String delYn = "N";
+
+    public void updateDelYn(){
+        this.delYn = "Y";
+    }
 }
