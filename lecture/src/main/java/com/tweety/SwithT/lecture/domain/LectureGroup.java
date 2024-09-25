@@ -46,7 +46,7 @@ public class LectureGroup extends BaseTimeEntity {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
