@@ -1,5 +1,6 @@
 package com.tweety.SwithT.member.dto;
 
+import com.tweety.SwithT.member.domain.Gender;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
