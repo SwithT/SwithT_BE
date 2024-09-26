@@ -6,7 +6,7 @@ import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.common.service.MemberFeign;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
-import com.tweety.SwithT.lecture.dto.MemberNameResDto;
+import com.tweety.SwithT.common.dto.MemberNameResDto;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import com.tweety.SwithT.lecture.repository.LectureRepository;
 import com.tweety.SwithT.lecture_apply.domain.LectureApply;
@@ -43,9 +43,7 @@ public class LectureApplyService {
     @Transactional
     public SingleLectureApplyAfterResDto tuteeSingleLectureApply(SingleLectureApplySavedDto dto) {
         Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-//        String token = ((UsernamePasswordAuthenticationToken) SecurityContextHolder.getContext().getAuthentication()).getCredentials().toString();
-//        Claims claims = Jwts.parser().setSigningKey(secretKey).parseClaimsJws(token).getBody();
-//        String memberName = (String) claims.get("name");
+
         CommonResDto commonResDto = memberFeign.getMemberNameById(memberId);
         ObjectMapper objectMapper = new ObjectMapper();
         MemberNameResDto memberNameResDto = objectMapper.convertValue(commonResDto.getResult(), MemberNameResDto.class);
