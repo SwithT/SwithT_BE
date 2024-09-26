@@ -12,8 +12,8 @@ import com.tweety.SwithT.comment.dto.update.CommentUpdateRequest;
 import com.tweety.SwithT.comment.dto.update.CommentUpdateResponse;
 import com.tweety.SwithT.comment.repository.CommentRepository;
 import com.tweety.SwithT.common.dto.CommonResDto;
+import com.tweety.SwithT.common.dto.MemberNameResDto;
 import com.tweety.SwithT.common.service.MemberFeign;
-import com.tweety.SwithT.lecture.dto.MemberNameResDto;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import jakarta.persistence.EntityNotFoundException;
@@ -82,7 +82,7 @@ public class CommentService {
 
         //작성자 확인
         Long loginMemberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        if(!comment.getMemberId().equals(loginMemberId)) throw new RuntimeException("해당 댓글을 작성한 회원만 수정이 가능합니다.");
+        if(!comment.getMemberId().equals(loginMemberId)) throw new RuntimeException("해당 댓글을 작성한 회원만 삭제 가능합니다.");
 
         comment.updateDelYn();
         return CommentDeleteResponse.fromEntity(comment);

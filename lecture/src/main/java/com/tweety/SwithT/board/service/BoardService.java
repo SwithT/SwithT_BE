@@ -10,13 +10,10 @@ import com.tweety.SwithT.board.dto.read.BoardListResponse;
 import com.tweety.SwithT.board.dto.update.BoardUpdateRequest;
 import com.tweety.SwithT.board.dto.update.BoardUpdateResponse;
 import com.tweety.SwithT.board.repository.BoardRepository;
-<<<<<<< HEAD
 import com.tweety.SwithT.common.dto.CommonResDto;
+import com.tweety.SwithT.common.dto.MemberNameResDto;
 import com.tweety.SwithT.common.service.MemberFeign;
-=======
->>>>>>> a329ddc52166aeb46b4e96b9eeef534246017be6
 import com.tweety.SwithT.lecture.domain.LectureGroup;
-import com.tweety.SwithT.lecture.dto.MemberNameResDto;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -37,12 +34,9 @@ public class BoardService {
 
     private final BoardRepository boardRepository;
     private final LectureGroupRepository lectureGroupRepository;
-<<<<<<< HEAD
     private final MemberFeign memberFeign;
     public BoardService(BoardRepository boardRepository , LectureGroupRepository lectureGroupRepository, MemberFeign memberFeign) {
-=======
-    public BoardService(BoardRepository boardRepository, LectureGroupRepository lectureGroupRepository) {
->>>>>>> a329ddc52166aeb46b4e96b9eeef534246017be6
+
         this.boardRepository = boardRepository;
         this.lectureGroupRepository = lectureGroupRepository;
         this.memberFeign = memberFeign;
