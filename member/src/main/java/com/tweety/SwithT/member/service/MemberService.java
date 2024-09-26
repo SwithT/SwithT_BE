@@ -2,10 +2,7 @@ package com.tweety.SwithT.member.service;
 
 import com.tweety.SwithT.common.service.S3Service;
 import com.tweety.SwithT.member.domain.Member;
-import com.tweety.SwithT.member.dto.MemberInfoResDto;
-import com.tweety.SwithT.member.dto.MemberLoginDto;
-import com.tweety.SwithT.member.dto.MemberSaveReqDto;
-import com.tweety.SwithT.member.dto.MemberUpdateDto;
+import com.tweety.SwithT.member.dto.*;
 import com.tweety.SwithT.member.repository.MemberRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -95,4 +92,15 @@ public class MemberService {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
+
+    //회원 이름 가져오는 메서드(feignClient에서 사용)
+    public MemberNameResDto memberNameGet(Long id) {
+        Member member = memberRepository.findById(id).orElseThrow(()->{
+            throw new EntityExistsException("존재하지 않는 회원입니다.");
+        });
+
+        return MemberNameResDto.builder()
+                .name(member.getName())
+                .build();
+    }
 }

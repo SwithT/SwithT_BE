@@ -9,7 +9,6 @@ import com.tweety.SwithT.board.dto.read.BoardListResponse;
 import com.tweety.SwithT.board.dto.update.BoardUpdateRequest;
 import com.tweety.SwithT.board.dto.update.BoardUpdateResponse;
 import com.tweety.SwithT.board.repository.BoardRepository;
-import com.tweety.SwithT.common.auth.JwtTokenProvider;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import io.jsonwebtoken.Claims;
@@ -30,11 +29,9 @@ public class BoardService {
     private String secretKey;
 
     private final BoardRepository boardRepository;
-    private final JwtTokenProvider jwtTokenProvider;
     private final LectureGroupRepository lectureGroupRepository;
-    public BoardService(BoardRepository boardRepository, JwtTokenProvider jwtTokenProvider, LectureGroupRepository lectureGroupRepository) {
+    public BoardService(BoardRepository boardRepository, LectureGroupRepository lectureGroupRepository) {
         this.boardRepository = boardRepository;
-        this.jwtTokenProvider = jwtTokenProvider;
         this.lectureGroupRepository = lectureGroupRepository;
     }
 

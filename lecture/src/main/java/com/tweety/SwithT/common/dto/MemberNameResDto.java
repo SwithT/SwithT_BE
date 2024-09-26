@@ -1,4 +1,4 @@
-package com.tweety.SwithT.lecture.dto;
+package com.tweety.SwithT.common.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

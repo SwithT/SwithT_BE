@@ -1,14 +1,14 @@
-package com.tweety.SwithT.payment.dto;
+package com.tweety.SwithT.member.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PaymentResDto {
-
+public class MemberNameResDto {
+    private String name;
 }
