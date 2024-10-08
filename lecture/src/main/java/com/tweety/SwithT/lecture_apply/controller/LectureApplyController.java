@@ -1,5 +1,6 @@
 package com.tweety.SwithT.lecture_apply.controller;
 
+import com.tweety.SwithT.common.dto.CommonErrorDto;
 import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.lecture_apply.dto.LectureApplySavedDto;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplySavedDto;
@@ -70,5 +71,26 @@ public class LectureApplyController {
     public ResponseEntity<?> tuteeLectureApply(@RequestBody LectureApplySavedDto dto) throws InterruptedException {
         CommonResDto commonResDto = new CommonResDto(HttpStatus.CREATED, "튜티의 강의 신청 완료", lectureApplyService.tuteeLectureApply(dto));
         return new ResponseEntity<>(commonResDto, HttpStatus.CREATED);
+    }
+
+    @GetMapping("/lecture/group/{id}")
+    public ResponseEntity<?> getLectureApplyPayInfo(@PathVariable Long id){
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의 그룹 정보",lectureApplyService.getLectureGroupByApplyId(id));
+        return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+    }
+
+    @PutMapping("lecture-apply/{id}/status")
+    public ResponseEntity<?>updateLectureApplyStatus(@PathVariable("id") Long lectureApplyId,
+                                                     @RequestBody CommonResDto commonResDto){
+        try {
+            System.out.println("feign 넘어옴");
+            System.out.println("메시지: " + commonResDto.getStatus_message());
+            System.out.println("결과: " + commonResDto.getResult());
+            lectureApplyService.updateLectureApplyStatus(lectureApplyId, commonResDto.getResult().toString()); // 상태 업데이트 로직 구현
+            return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            CommonErrorDto commonErrorDto = new CommonErrorDto(HttpStatus.BAD_REQUEST.value(), commonResDto.getStatus_message());
+            return new ResponseEntity<>(commonErrorDto, HttpStatus.BAD_REQUEST);
+        }
     }
 }

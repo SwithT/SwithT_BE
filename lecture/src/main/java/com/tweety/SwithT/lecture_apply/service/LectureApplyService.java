@@ -8,13 +8,13 @@ import com.tweety.SwithT.common.service.MemberFeign;
 import com.tweety.SwithT.common.service.RedisStreamProducer;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
+import com.tweety.SwithT.lecture.dto.LectureGroupPayResDto;
 import com.tweety.SwithT.lecture.dto.TuteeMyLectureListResDto;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import com.tweety.SwithT.lecture.repository.LectureRepository;
 import com.tweety.SwithT.lecture_apply.domain.LectureApply;
 import com.tweety.SwithT.lecture_apply.dto.*;
 import com.tweety.SwithT.lecture_apply.repository.LectureApplyRepository;
-import com.tweety.SwithT.lecture_chat_room.domain.LectureChatParticipants;
 import com.tweety.SwithT.lecture_chat_room.domain.LectureChatRoom;
 import com.tweety.SwithT.lecture_chat_room.repository.LectureChatParticipantsRepository;
 import com.tweety.SwithT.lecture_chat_room.repository.LectureChatRoomRepository;
@@ -34,7 +34,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 @Service
@@ -147,7 +148,8 @@ public class LectureApplyService {
         lectureApply.updateStatus(Status.WAITING);
 
         //결제 요청 보내기
-        redisStreamProducer.publishMessage(lectureApply.getMemberId().toString(), "결제요청", "수학천재가 되는 길에서 결제 요청을 했습니다.", lectureApply.getId().toString());
+        redisStreamProducer.publishMessage(lectureApply.getMemberId().toString(),
+                "결제요청", "수학천재가 되는 길에서 결제 요청을 했습니다.", lectureApply.getId().toString());
 
 
         return "튜터가 해당 수강신청을 승인했습니다.";
@@ -288,5 +290,29 @@ public class LectureApplyService {
         LectureApply lectureApply = lectureApplyRepository.save(dto.toEntity(lectureGroup, memberId, memberName));
 
         return lectureGroup.getId()+"번 강의에 수강 신청되었습니다.";
+    }
+
+    public LectureGroupPayResDto getLectureGroupByApplyId(Long id){
+        LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException("수강 번호 불러오기 실패"));
+        LectureGroup lectureGroup = lectureApply.getLectureGroup();
+
+        return LectureGroupPayResDto.builder()
+                .groupId(lectureGroup.getId())
+                .lectureName(lectureGroup.getLecture().getTitle())
+                .price(lectureGroup.getPrice())
+                .build();
+    }
+
+    public void updateLectureApplyStatus(Long id, String message){
+        LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
+                ()-> new EntityNotFoundException("수강 정보 불러오기 실패"));
+
+        lectureApply.updatePaidStatus(message);
+        if(message.equals("paid")){
+            LectureGroup lectureGroup = lectureApply.getLectureGroup();
+            lectureGroup.decreaseRemaining();
+        }
+        lectureApplyRepository.save(lectureApply);
     }
 }

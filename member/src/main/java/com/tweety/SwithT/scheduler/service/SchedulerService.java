@@ -42,7 +42,7 @@ public class SchedulerService {
         this.schedulerAlertRepository = schedulerAlertRepository;
     }
 
-//    @KafkaListener(topics = "schedule-update", groupId = "member-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "schedule-update", groupId = "member-group", containerFactory = "kafkaListenerContainerFactory")
     public void updateScheduleFromKafka(String message) {
         try {
 //            System.out.println("수신된 Kafka 메시지: " + message);

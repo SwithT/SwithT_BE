@@ -111,6 +111,7 @@ public class Member extends BaseTimeEntity {
                 .phoneNumber(this.phoneNumber)
                 .education(this.education)
                 .introduce(this.introduce)
+                .role(this.role)
                 .build();
     }
 

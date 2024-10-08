@@ -17,7 +17,6 @@ import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import com.tweety.SwithT.lecture.repository.LectureRepository;
 import com.tweety.SwithT.lecture_apply.domain.LectureApply;
 import com.tweety.SwithT.lecture_apply.repository.LectureApplyRepository;
-import com.tweety.SwithT.lecture_apply.service.WaitingService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -114,7 +113,7 @@ public class LectureService {
 //        }
 //    }
 
-    public Page<LectureListResDto> showLectureList(LectureSearchDto searchDto, Pageable pageable) {
+    public Page<LectureListResDto> showLectureListInOpenSearch(LectureSearchDto searchDto, Pageable pageable) {
         String keyword = searchDto.getSearchTitle(); // 검색 제목
 
         try {
@@ -419,6 +418,7 @@ public class LectureService {
         lecture.updateStatus(newStatus);
         if(newStatus.equals(Status.ADMIT)){
             getGroupTimes(statusUpdateDto.getLectureId());
+            // 튜터만 있는 채팅방 만드는 메서드 추가
         }
         lectureRepository.save(lecture);
     }
@@ -486,4 +486,38 @@ public class LectureService {
 
         return groupTimesDto;
     }
+
+    public LectureTitleAndImageResDto getTitleAndThumbnail(Long id){
+        Lecture lecture = lectureRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("강의 정보 가져오기에 실패했습니다."));
+        return LectureTitleAndImageResDto.builder()
+                .title(lecture.getTitle())
+                .image(lecture.getImage())
+                .build();
+    }
+
+    public LectureGroupResDto getLectureGroupInfo(Long id){
+        LectureGroup lectureGroup = lectureGroupRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException("강의 그룹 가져오기 실패"));
+        List<LectureGroupTimeResDto> timeResDtos = new ArrayList<>();
+        List<GroupTime> groupTimes = lectureGroup.getGroupTimes();
+        for(GroupTime groupTime : groupTimes){
+            LectureGroupTimeResDto dto = LectureGroupTimeResDto.builder()
+                    .lectureDay(groupTime.getLectureDay().toString())
+                    .startTime(groupTime.getStartTime().toString())
+                    .endTime(groupTime.getEndTime().toString())
+                    .build();
+            timeResDtos.add(dto);
+        }
+        return LectureGroupResDto.builder()
+                .title(lectureGroup.getLecture().getTitle())
+                .image(lectureGroup.getLecture().getImage())
+                .longitude(lectureGroup.getLongitude())
+                .latitude(lectureGroup.getLatitude())
+                .times(timeResDtos)
+                .tutorName(lectureGroup.getLecture().getMemberName())
+                .category(lectureGroup.getLecture().getCategory().name())
+                .build();
+    }
+
 }

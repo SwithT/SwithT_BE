@@ -76,7 +76,7 @@ public class LectureController {
             PagedResourcesAssembler<LectureListResDto> assembler) {
         try {
             // 검색 수행 후 Page 객체로 반환
-            Page<LectureListResDto> searchResults = lectureService.showLectureList(searchDto, pageable);
+            Page<LectureListResDto> searchResults = lectureService.showLectureListInOpenSearch(searchDto, pageable);
 
             // PagedModel로 변환 (LectureListResDto를 EntityModel로 감싸기)
             PagedModel<EntityModel<LectureListResDto>> pagedModel = assembler.toModel(searchResults,
@@ -145,5 +145,18 @@ public class LectureController {
         lectureService.lectureGroupDelete(id);
         CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의 그룹 삭제", id);
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+    }
+
+    // 강의 제목, 썸네일 가져오는 요청
+    @GetMapping("lecture/get-image-and-title/{id}")
+    public ResponseEntity<?> getImageAndThumbnail(@PathVariable Long id){
+        LectureTitleAndImageResDto dto = lectureService.getTitleAndThumbnail(id);
+        try {
+            CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "제목과 썸네일", dto);
+            return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+        } catch (EntityNotFoundException e){
+            CommonErrorDto commonErrorDto = new CommonErrorDto(HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return new ResponseEntity<>(commonErrorDto, HttpStatus.NOT_FOUND);
+        }
     }
 }

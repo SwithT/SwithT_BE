@@ -16,7 +16,7 @@ public class FeignConfig {
             if (SecurityContextHolder.getContext().getAuthentication() != null) {
                 String token = (String) SecurityContextHolder.getContext().getAuthentication().getCredentials();
                 if (token != null && !token.isEmpty()) {
-                    request.header(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+                    request.header(HttpHeaders.AUTHORIZATION, token);
                 } else {
                     System.out.println("JWT Token is missing in SecurityContext.");
                 }

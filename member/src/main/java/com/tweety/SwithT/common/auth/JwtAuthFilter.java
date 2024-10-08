@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 @Component
@@ -33,12 +34,6 @@ public class JwtAuthFilter extends GenericFilter {
 
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         String bearerToken = request.getHeader("Authorization");
-
-        String path = request.getRequestURI();
-        System.out.println(path + " 여기에 path");
-        System.out.println(request.getRequestURI());
-        System.out.println(request.getAuthType());
-        System.out.println(request.getMethod());
 
 //       테스트 후 문제 없을 시 삭제하기
 //        // 구글 로그인 관련 요청을 제외
