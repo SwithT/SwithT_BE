@@ -47,7 +47,7 @@ class LectureApplyServiceTest {
 
     @Test
     void 강의신청_200명_중_100명_신청_테스트() throws InterruptedException {
-        final Long lectureGroupId = 6L; // 테스트에 사용할 강의 그룹 ID
+        final Long lectureGroupId = lectureGroup.getId(); // 테스트에 사용할 강의 그룹 ID
         final int totalApplicants = 200; // 총 신청자 수
         final int limitCount = 100; // 최대 신청 가능 수
 

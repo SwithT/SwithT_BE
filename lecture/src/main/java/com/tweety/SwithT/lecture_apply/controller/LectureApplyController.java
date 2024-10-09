@@ -3,7 +3,6 @@ package com.tweety.SwithT.lecture_apply.controller;
 import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplySavedDto;
 import com.tweety.SwithT.lecture_apply.service.LectureApplyService;
-import com.tweety.SwithT.lecture_apply.service.WaitingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -17,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 public class LectureApplyController {
 
     private final LectureApplyService lectureApplyService;
-    private final WaitingService waitingService;
 
     //과외 신청
     @PreAuthorize("hasRole('TUTEE')")
