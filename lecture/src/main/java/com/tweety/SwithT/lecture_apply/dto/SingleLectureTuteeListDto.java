@@ -12,5 +12,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class SingleLectureTuteeListDto {
     private String tuteeName;
+    private String tuteeProfile;
     private Long memberId;
 }
