@@ -13,6 +13,7 @@ import java.time.LocalTime;
 @NoArgsConstructor
 @Builder
 public class ScheduleResDto {
+    private Long id;
     private String title;
     private LocalDate schedulerDate;
     private LocalTime schedulerTime;

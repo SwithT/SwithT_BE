@@ -139,6 +139,17 @@ public class MemberService {
                 .build();
     }
 
+    //회원 프로필 이미지 가져오는 메서드(feignClient에서 사용)
+    public MemberProfileResDto memberProfileGet(Long id) {
+        Member member = memberRepository.findById(id).orElseThrow(()->{
+            throw new EntityExistsException("존재하지 않는 회원입니다.");
+        });
+
+        return MemberProfileResDto.builder()
+                .image(member.getProfileImage())
+                .build();
+    }
+
 //    public void lectureStatusUpdate(Long lectureId, Status newStatus){
 //        LectureStatusUpdateDto statusUpdateDto = LectureStatusUpdateDto.builder()
 //                .lectureId(lectureId)

@@ -18,6 +18,7 @@ public class RedisStreamSseConsumer implements StreamListener<String, MapRecord<
 
     @Override
     public void onMessage(MapRecord<String, String, String> record) {
+        String recordId = record.getId().getValue(); // Redis Stream 고유 ID
         String memberId = record.getValue().get("memberId");
         String messageType = record.getValue().get("messageType");
         String title = record.getValue().get("title");
@@ -28,6 +29,7 @@ public class RedisStreamSseConsumer implements StreamListener<String, MapRecord<
         if(emitter != null){
             try {
                 Map<String, String> structuredMessage = new HashMap<>();
+                structuredMessage.put("id", recordId); // Redis Stream 고유 ID
                 structuredMessage.put("messageType", messageType);
                 structuredMessage.put("title", title);
                 structuredMessage.put("contents", contents);
@@ -44,8 +46,9 @@ public class RedisStreamSseConsumer implements StreamListener<String, MapRecord<
                 emitter.completeWithError(e);
                 clients.remove(memberId);
             }
+        } else {
+            System.out.println("No emitter found for memberId: " + memberId); // 클라이언트가 없을 때 로그
         }
-
     }
 
     public void addClient(String memberId, SseEmitter emitter) {

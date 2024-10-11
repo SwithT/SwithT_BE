@@ -10,4 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 public interface MemberFeign {
     @GetMapping(value = "/member-name-get/{id}")
     CommonResDto getMemberNameById(@PathVariable("id")Long id);
+
+    @GetMapping(value="/member-profile-get/{id}")
+    CommonResDto getMemberProfileById(@PathVariable("id") Long id);
 }

@@ -82,6 +82,7 @@ public class Scheduler extends BaseTimeEntity {
 
     public ScheduleResDto fromEntity(){
         return ScheduleResDto.builder()
+                .id(this.id)
                 .title(this.title)
                 .schedulerDate(this.schedulerDate)
                 .schedulerTime(this.schedulerTime)

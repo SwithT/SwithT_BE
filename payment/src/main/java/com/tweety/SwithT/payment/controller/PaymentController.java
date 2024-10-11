@@ -2,6 +2,7 @@ package com.tweety.SwithT.payment.controller;
 
 import com.tweety.SwithT.common.dto.CommonErrorDto;
 import com.tweety.SwithT.common.dto.CommonResDto;
+import com.tweety.SwithT.payment.dto.LecturePayResDto;
 import com.tweety.SwithT.payment.dto.PaymentListDto;
 import com.tweety.SwithT.payment.dto.RefundReqDto;
 import com.tweety.SwithT.payment.service.PaymentService;
@@ -22,37 +23,34 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
 
-    @PostMapping("/ispaid/{id}")
-    public ResponseEntity<?> isPaidAvailable(@PathVariable("id") Long lecturePayId) {
+    @PostMapping("/complete")
+    public ResponseEntity<?> updateApplyStatus(@RequestBody LecturePayResDto lecturePayResDto) {
         try {
-            // 결제 처리 로직
-            CommonResDto commonResDto = paymentService.handleLessonAndPayment(lecturePayId);
-            return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+            // 결제 완료 처리 및 강의 상태 업데이트
+            CommonResDto response = paymentService.handleApplyStatus(lecturePayResDto);
+            return new ResponseEntity<>(response, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
-            // 잘못된 요청 (예: 금액 불일치, 결제 상태 문제)
             CommonErrorDto commonErrorDto = new CommonErrorDto(
                     HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return new ResponseEntity<>(commonErrorDto, HttpStatus.BAD_REQUEST);
         } catch (ResponseStatusException e) {
-            // Feign 통신 또는 기타 특정 오류에 대한 처리
             CommonErrorDto commonErrorDto = new CommonErrorDto(
                     HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getReason());
             return new ResponseEntity<>(commonErrorDto, HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (RuntimeException e) {
-            // 그 외의 모든 런타임 예외 처리
-            CommonErrorDto commonErrorDto = new CommonErrorDto(
+            CommonErrorDto commonErrorDto =  new CommonErrorDto(
                     HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
             return new ResponseEntity<>(commonErrorDto, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @PostMapping("/refund")
-    public ResponseEntity<?> processRefund(
+    @PostMapping("/refund/{id}")
+    public ResponseEntity<?> processRefund(@PathVariable Long id,
             @RequestBody RefundReqDto refundReqDto // 환불 요청에 필요한 데이터
     ) {
         try {
             // 환불 처리
-            paymentService.refund(refundReqDto.getImpUid(), refundReqDto.getAmount(), refundReqDto.getCancelReason());
+            paymentService.refund(id,refundReqDto.getImpUid(), refundReqDto.getAmount(), refundReqDto.getCancelReason());
             CommonResDto commonResDto = new CommonResDto(
                     HttpStatus.OK, "환불 처리 완료", refundReqDto);
             return new ResponseEntity<>(commonResDto, HttpStatus.OK);
@@ -80,5 +78,11 @@ public class PaymentController {
                     HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
             return new ResponseEntity<>(commonErrorDto, HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @GetMapping("/hello")
+    public String hello(){
+        System.out.println("hello");
+        return "hello";
     }
 }

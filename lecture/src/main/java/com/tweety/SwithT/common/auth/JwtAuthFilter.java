@@ -38,7 +38,6 @@ public class JwtAuthFilter extends GenericFilter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
 
         HttpServletRequest request = (HttpServletRequest) servletRequest;
-        String requestURI = request.getRequestURI();
         String bearerToken = request.getHeader("Authorization");
 
         try {

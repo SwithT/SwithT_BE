@@ -1,13 +1,14 @@
-package com.tweety.SwithT.payment.dto;
+package com.tweety.SwithT.common.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class PaymentSuccessEventDto {
-    private String impUid;
-    private long amount;
+public class MemberProfileResDto {
+    private String image;
 }

@@ -169,4 +169,10 @@ public class MemberController {
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
 
+    @GetMapping(value="/member-profile-get/{id}")
+    public ResponseEntity<?> getMemberProfileById(@PathVariable("id") Long id){
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "각 튜티의 프로필 이미지", memberService.memberProfileGet(id));
+        return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+    }
+
 }

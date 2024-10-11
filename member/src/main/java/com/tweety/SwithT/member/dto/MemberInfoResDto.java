@@ -1,6 +1,7 @@
 package com.tweety.SwithT.member.dto;
 
 import com.tweety.SwithT.member.domain.Gender;
+import com.tweety.SwithT.member.domain.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -26,5 +27,5 @@ public class MemberInfoResDto {
     private String education;
     //튜터 필드
     private String introduce;
-
+    private Role role;
 }

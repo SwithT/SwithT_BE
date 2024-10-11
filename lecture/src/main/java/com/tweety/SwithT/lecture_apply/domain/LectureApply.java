@@ -2,9 +2,7 @@ package com.tweety.SwithT.lecture_apply.domain;
 
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.common.domain.Status;
-import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
-import com.tweety.SwithT.lecture.domain.LectureType;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplyListDto;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureTuteeListDto;
 import jakarta.persistence.*;
@@ -72,5 +70,19 @@ public class LectureApply extends BaseTimeEntity {
         this.status = updateStatus;
     }
 
+    public void updatePaidStatus(String updateStatus) {
+        System.out.println("잘 들어옴, 결과: " + updateStatus);
+        switch (updateStatus) {
+            case "paid":
+                System.out.println("paid일 때");
+                this.status = Status.ADMIT; // 결제 완료 시 ADMIT 상태로 변경
+                break;
+            case "cancelled":
+                this.status = Status.CANCEL; // 결제가 취소된 경우 CANCEL 상태로 변경
+                break;
+            default:
+                throw new IllegalArgumentException("유효하지 않은 결제 상태입니다: " + updateStatus);
+        }
+    }
 
 }

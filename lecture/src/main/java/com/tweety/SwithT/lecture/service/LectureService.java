@@ -17,8 +17,6 @@ import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
 import com.tweety.SwithT.lecture.repository.LectureRepository;
 import com.tweety.SwithT.lecture_apply.domain.LectureApply;
 import com.tweety.SwithT.lecture_apply.repository.LectureApplyRepository;
-import com.tweety.SwithT.lecture_chat_room.domain.LectureChatRoom;
-import com.tweety.SwithT.lecture_chat_room.repository.LectureChatRoomRepository;
 import com.tweety.SwithT.lecture_apply.service.WaitingService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -27,7 +25,6 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -47,7 +44,6 @@ public class LectureService {
 
     private final LectureRepository lectureRepository;
     private final LectureGroupRepository lectureGroupRepository;
-    private final LectureChatRoomRepository lectureChatRoomRepository;
     private final GroupTimeRepository groupTimeRepository;
     private final LectureApplyRepository lectureApplyRepository;
     private final ObjectMapper objectMapper;
@@ -57,11 +53,10 @@ public class LectureService {
 
     private final OpenSearchService openSearchService;
 
-    public LectureService(LectureRepository lectureRepository, LectureGroupRepository lectureGroupRepository, LectureChatRoomRepository lectureChatRoomRepository, GroupTimeRepository groupTimeRepository, LectureApplyRepository lectureApplyRepository, ObjectMapper objectMapper, KafkaTemplate kafkaTemplate, MemberFeign memberFeign, S3Service s3Service, OpenSearchService openSearchService){
+    public LectureService(LectureRepository lectureRepository, LectureGroupRepository lectureGroupRepository, GroupTimeRepository groupTimeRepository, LectureApplyRepository lectureApplyRepository, ObjectMapper objectMapper, KafkaTemplate kafkaTemplate, MemberFeign memberFeign, S3Service s3Service, OpenSearchService openSearchService){
 
         this.lectureRepository = lectureRepository;
         this.lectureGroupRepository = lectureGroupRepository;
-        this.lectureChatRoomRepository = lectureChatRoomRepository;
         this.groupTimeRepository = groupTimeRepository;
         this.lectureApplyRepository = lectureApplyRepository;
         this.objectMapper = objectMapper;
@@ -559,6 +554,40 @@ public class LectureService {
         }
         dto.setLectureGroupTimes(groupTimeResDtos);
         return dto;
+    }
+
+
+    public LectureTitleAndImageResDto getTitleAndThumbnail(Long id){
+        Lecture lecture = lectureRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("강의 정보 가져오기에 실패했습니다."));
+        return LectureTitleAndImageResDto.builder()
+                .title(lecture.getTitle())
+                .image(lecture.getImage())
+                .build();
+    }
+
+    public LectureGroupResDto getLectureGroupInfo(Long id){
+        LectureGroup lectureGroup = lectureGroupRepository.findById(id).orElseThrow(
+                () -> new EntityNotFoundException("강의 그룹 가져오기 실패"));
+        List<LectureGroupTimeResDto> timeResDtos = new ArrayList<>();
+        List<GroupTime> groupTimes = lectureGroup.getGroupTimes();
+        for(GroupTime groupTime : groupTimes){
+            LectureGroupTimeResDto dto = LectureGroupTimeResDto.builder()
+                    .lectureDay(groupTime.getLectureDay().toString())
+                    .startTime(groupTime.getStartTime().toString())
+                    .endTime(groupTime.getEndTime().toString())
+                    .build();
+            timeResDtos.add(dto);
+        }
+        return LectureGroupResDto.builder()
+                .title(lectureGroup.getLecture().getTitle())
+                .image(lectureGroup.getLecture().getImage())
+                .longitude(lectureGroup.getLongitude())
+                .latitude(lectureGroup.getLatitude())
+                .times(timeResDtos)
+                .tutorName(lectureGroup.getLecture().getMemberName())
+                .category(lectureGroup.getLecture().getCategory().name())
+                .build();
     }
 
 }

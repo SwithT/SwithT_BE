@@ -11,7 +11,10 @@ import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.payment.domain.Balance;
 import com.tweety.SwithT.payment.domain.Payments;
 import com.tweety.SwithT.payment.domain.Status;
-import com.tweety.SwithT.payment.dto.*;
+import com.tweety.SwithT.payment.dto.BalanceUpdateDto;
+import com.tweety.SwithT.payment.dto.LecturePayResDto;
+import com.tweety.SwithT.payment.dto.PaymentListDto;
+import com.tweety.SwithT.payment.dto.RefundReqDto;
 import com.tweety.SwithT.payment.repository.BalanceRepository;
 import com.tweety.SwithT.payment.repository.PaymentRepository;
 import feign.FeignException;
@@ -57,50 +60,17 @@ public class PaymentService {
         this.paymentRepository = paymentRepository;
     }
 
-    @Transactional
-    public CommonResDto handleLessonAndPayment(Long lecturePayId) {
-        // 과외 정보를 Feign Client로 가져옴
-        CommonResDto commonResDto = getLecturePayInfo(lecturePayId);
-        LecturePayResDto lecturePayResDto = objectMapper.convertValue(
-                commonResDto.getResult(), LecturePayResDto.class);
-
-        PaymentDto paymentDto = PaymentDto.builder()
-                .impUid(lecturePayResDto.getImpUid())
-                .price(lecturePayResDto.getPrice())
-                .build();
-
-        // 결제 완료 상태 확인
-        Boolean status = isPaymentComplete(paymentDto, lecturePayResDto);
-
-        // 상태에 따른 응답 생성
-        HttpStatus responseStatus = status ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
-        String responseMessage = status ? "결제가 성공적으로 완료되었습니다." : "결제에 실패했습니다.";
-
-        CommonResDto returnResDto = new CommonResDto(
-                responseStatus, responseMessage, status);
-
-        // 결제 상태 업데이트 요청
-        try {
-            lectureFeign.paidStatus(returnResDto);
-        } catch (FeignException e) {
-            // Feign 호출 실패 시 롤백 및 예외 처리
-            throw new ResponseStatusException(
-                    HttpStatus.INTERNAL_SERVER_ERROR, "Feign 통신 중 오류 발생: " + e.getMessage());
-        }
-
-        return returnResDto;
-    }
-
-
-    private Boolean isPaymentComplete(PaymentDto dto, LecturePayResDto lecturePayResDto) {
+    public String isPaymentComplete(LecturePayResDto lecturePayResDto) {
         IamportClient iamportClient = iamportApiProperty.getIamportClient();
         IamportResponse<Payment> paymentResponse;
 
         try {
-            paymentResponse = iamportClient.paymentByImpUid(dto.getImpUid()); // 결제 검증
+            paymentResponse = iamportClient.paymentByImpUid(lecturePayResDto.getImpUid()); // 결제 검증
         } catch (IamportResponseException e) {
+            System.out.println("case 1");
             throw new IllegalArgumentException("결제 검증 실패: " + e.getMessage());
         } catch (IOException e) {
+            System.out.println("case 2");
             throw new RuntimeException("결제 검증 중 IO 오류 발생", e);
         }
 
@@ -108,14 +78,16 @@ public class PaymentService {
 
         // 결제 상태 검증
         if (!"paid".equals(payment.getStatus())) {
+            System.out.println("case 3");
             throw new IllegalArgumentException("결제가 완료되지 않았습니다.");
         }
 
         // 결제 금액 검증
         long paidAmount = payment.getAmount().longValue();
-        long lecturePrice = dto.getPrice();
+        long lecturePrice = lecturePayResDto.getPrice();
 
         if (paidAmount != lecturePrice) {
+            System.out.println("case 4");
             throw new IllegalArgumentException(
                     "결제 금액이 일치하지 않습니다. (지불 금액: " + paidAmount + ", 예상 금액: " + lecturePrice + ")");
         }
@@ -148,13 +120,42 @@ public class PaymentService {
 
         paymentRepository.save(payments);
 
-        return true;
+        return payment.getStatus();
     }
 
-    // Feign Client를 사용하여 과외 정보 가져오기
-    private CommonResDto getLecturePayInfo(Long lecturePayId) {
-        return lectureFeign.getLectureById(lecturePayId);
+    @Transactional
+    public CommonResDto handleApplyStatus(LecturePayResDto lecturePayResDto) {
+        // 결제 상태 확인
+        String status = isPaymentComplete(lecturePayResDto);
+        System.out.println("status:" + status);
+        // 결제 상태에 따른 응답 처리
+        boolean isPaid = "paid".equalsIgnoreCase(status); // 상태가 'paid'인 경우 결제 성공으로 처리
+        HttpStatus responseStatus = isPaid ? HttpStatus.OK : HttpStatus.BAD_REQUEST;
+        String responseMessage = isPaid ? "결제가 성공적으로 완료되었습니다." : "결제에 실패했습니다.";
+
+        CommonResDto returnResDto = new CommonResDto(
+                responseStatus, responseMessage, status);
+
+        if (isPaid) {
+            // 결제가 성공적으로 완료되었을 경우 Feign Client를 사용해 lectureApply 상태 업데이트
+            try {
+                // 결제 완료 시 상태를 "PAID"로 업데이트
+                lectureFeign.updateLectureApplyStatus(lecturePayResDto.getId(), returnResDto);
+            } catch (FeignException e) {
+                System.out.println("case 5");
+                // Feign 호출 실패 시 예외 처리
+                throw new ResponseStatusException(
+                        HttpStatus.INTERNAL_SERVER_ERROR, "Feign 통신 중 오류 발생: " + e.getMessage());
+            }
+        }
+
+        return returnResDto;
     }
+
+//    // Feign Client를 사용하여 그룹 정보 가져오기
+//    private CommonResDto getLecturePayInfo(Long lecturePayId) {
+//        return lectureFeign.getLectureApplyPayInfo(lecturePayId);
+//    }
 
     // Unix 타임 (long) -> LocalDateTime 변환 메서드
     private LocalDateTime convertUnixToLocalDateTime(long unixTime) {
@@ -210,7 +211,7 @@ public class PaymentService {
     }
 
     @Transactional
-    public void refund(String impUid, BigDecimal amount, String cancelReason) {
+    public void refund(Long applyId, String impUid, BigDecimal amount, String cancelReason) {
         Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
 
         // 결제 정보 조회
@@ -248,7 +249,7 @@ public class PaymentService {
                 refundRequest.setImpUid(impUid);
                 refundRequest.setAmount(amount);
                 refundRequest.setCancelReason(cancelReason);
-                lectureFeign.refundStatus(refundRequest);
+                lectureFeign.requestRefund(applyId, refundRequest);
             } else {
                 throw new RuntimeException("결제 취소 중 오류 발생: 결제 상태를 확인할 수 없습니다.");
             }
@@ -265,7 +266,7 @@ public class PaymentService {
 
         Pageable pageable = PageRequest.of(validPage, validSize);
 
-        Page<Payments> paymentList = paymentRepository.findByTuteeId(pageable, tuteeId);
+        Page<Payments> paymentList = paymentRepository.findByMemberId(pageable, tuteeId);
         Page<PaymentListDto> dtos = paymentList.map(Payments::fromEntity);
 
         return dtos;

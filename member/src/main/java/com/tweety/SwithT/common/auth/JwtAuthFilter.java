@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
 
 @Component
@@ -33,6 +34,7 @@ public class JwtAuthFilter extends GenericFilter {
 
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         String bearerToken = request.getHeader("Authorization");
+
 
         String path = request.getRequestURI();
 
