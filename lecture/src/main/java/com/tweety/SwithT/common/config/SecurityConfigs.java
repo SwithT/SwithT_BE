@@ -26,7 +26,7 @@ public class SecurityConfigs {
                 .cors(cors -> cors.configure(httpSecurity)) // CORS 활성화
                 .httpBasic(httpBasic -> httpBasic.disable()) // 기본 인증 비활성화
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/ws/**", "/list-of-lecture", "/lecture-detail/{id}", "/lecture/search", "/lectures/latest", "/lectures/free", "/lecture/search/category")
+                        .requestMatchers("/ws/**", "/list-of-lecture", "/lecture-detail/{id}", "/lecture/search", "/lectures/latest", "/lectures/free", "/lecture/search/category", "/lecture-group-info/{id}")
                         .permitAll()
                         .anyRequest().authenticated()
                 )
