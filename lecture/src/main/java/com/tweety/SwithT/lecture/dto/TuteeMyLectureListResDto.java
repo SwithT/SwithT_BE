@@ -2,6 +2,7 @@ package com.tweety.SwithT.lecture.dto;
 
 import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.lecture.domain.LectureType;
+import com.tweety.SwithT.lecture.domain.ReviewStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,5 +28,6 @@ public class TuteeMyLectureListResDto {
     private LocalDateTime createdTime;
     private LectureType lectureType;
     private String lectureImage;
+    private ReviewStatus reviewStatus;
 
 }

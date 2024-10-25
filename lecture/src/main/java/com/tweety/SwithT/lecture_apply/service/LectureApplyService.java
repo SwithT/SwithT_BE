@@ -257,6 +257,7 @@ public class LectureApplyService {
                             .lectureType(lectureApply.getLectureGroup().getLecture().getLectureType())
                             .createdTime(lectureApply.getCreatedTime())
                             .lectureImage(lectureApply.getLectureGroup().getLecture().getImage())
+                            .reviewStatus(lectureApply.getReviewStatus()) //김민성 추가
                     .build());
         }
 
