@@ -8,11 +8,9 @@ import com.tweety.SwithT.common.dto.MemberNameResDto;
 import com.tweety.SwithT.common.dto.MemberScoreResDto;
 import com.tweety.SwithT.common.service.MemberFeign;
 import com.tweety.SwithT.common.service.OpenSearchService;
+import com.tweety.SwithT.common.service.RedisStreamProducer;
 import com.tweety.SwithT.common.service.S3Service;
-import com.tweety.SwithT.lecture.domain.GroupTime;
-import com.tweety.SwithT.lecture.domain.Lecture;
-import com.tweety.SwithT.lecture.domain.LectureGroup;
-import com.tweety.SwithT.lecture.domain.LectureType;
+import com.tweety.SwithT.lecture.domain.*;
 import com.tweety.SwithT.lecture.dto.*;
 import com.tweety.SwithT.lecture.repository.GroupTimeRepository;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
@@ -20,7 +18,9 @@ import com.tweety.SwithT.lecture.repository.LectureRepository;
 import com.tweety.SwithT.lecture_apply.domain.LectureApply;
 import com.tweety.SwithT.lecture_apply.repository.LectureApplyRepository;
 import com.tweety.SwithT.lecture_chat_room.domain.LectureChatRoom;
+import com.tweety.SwithT.lecture_chat_room.dto.ChatRoomCheckDto;
 import com.tweety.SwithT.lecture_chat_room.repository.LectureChatRoomRepository;
+import com.tweety.SwithT.lecture_chat_room.service.LectureChatRoomService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -41,7 +41,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -58,8 +62,8 @@ public class LectureService {
     private final MemberFeign memberFeign;
     private final S3Service s3Service;
     private final OpenSearchService openSearchService;
-
-
+    private final RedisStreamProducer redisStreamProducer;
+    private final LectureChatRoomService lectureChatRoomService;
 
     // Create
     @Transactional
@@ -113,55 +117,47 @@ public class LectureService {
         String keyword = searchDto.getSearchTitle(); // 검색 제목
 
         try {
-            // OpenSearch에서 검색 수행
-            List<LectureDetailResDto> searchResults = openSearchService.searchLectures(keyword, pageable, searchDto);
+            if(!searchDto.getCategory().isEmpty()){
+                // OpenSearch에서 검색 수행
+                List<LectureDetailResDto> searchResults = openSearchService.searchLecturesByCategory(searchDto, pageable);
 //            System.out.println(searchResults.get(0));
-            // 검색 결과를 LectureListResDto로 변환하여 페이지 객체로 반환
-            List<LectureListResDto> lectureList = searchResults.stream()
+                // 검색 결과를 LectureListResDto로 변환하여 페이지 객체로 반환
+                List<LectureListResDto> lectureList = searchResults.stream()
 //                    여기서 필요한 데이터 조립
-                    .map(detail -> LectureListResDto.builder()
-                            .id(detail.getId())
-                            .title(detail.getTitle())
-                            .memberName(detail.getMemberName())
-                            .memberId(detail.getMemberId())
-                            .image(detail.getImage())
-                            .category(detail.getCategory())
-                            .isContainsFree(isContainsFreeGroup(detail.getId()))
-                            .build())
-                    .collect(Collectors.toList());
+                        .map(detail -> LectureListResDto.builder()
+                                .id(detail.getId())
+                                .title(detail.getTitle())
+                                .memberName(detail.getMemberName())
+                                .memberId(detail.getMemberId())
+                                .image(detail.getImage())
+                                .category(detail.getCategory())
+                                .isContainsFree(isContainsFreeGroup(detail.getId()))
+                                .build())
+                        .collect(Collectors.toList());
 
-            // PageImpl로 페이지네이션 적용하여 반환
-            return new PageImpl<>(lectureList, pageable, searchResults.size());
-
-        } catch (IOException | InterruptedException e) {
-            // 예외 발생 시 로그 출력 및 빈 페이지 반환
-            throw new IllegalArgumentException(e);
-        }
-    }
-
-    public Page<LectureListResDto> showLectureListByCategory(LectureSearchDto searchDto, Pageable pageable) {
-
-        try {
-            // OpenSearch에서 검색 수행
-            List<LectureDetailResDto> searchResults = openSearchService.searchLecturesByCategory(searchDto.getCategory(), pageable);
+                // PageImpl로 페이지네이션 적용하여 반환
+                return new PageImpl<>(lectureList, pageable, searchResults.size());
+            } else{
+                List<LectureDetailResDto> searchResults = openSearchService.searchLectures(keyword, pageable, searchDto);
+                // OpenSearch에서 검색 수행
 //            System.out.println(searchResults.get(0));
-            // 검색 결과를 LectureListResDto로 변환하여 페이지 객체로 반환
-            List<LectureListResDto> lectureList = searchResults.stream()
+                // 검색 결과를 LectureListResDto로 변환하여 페이지 객체로 반환
+                List<LectureListResDto> lectureList = searchResults.stream()
 //                    여기서 필요한 데이터 조립
-                    .map(detail -> LectureListResDto.builder()
-                            .id(detail.getId())
-                            .title(detail.getTitle())
-                            .memberName(detail.getMemberName())
-                            .memberId(detail.getMemberId())
-                            .image(detail.getImage())
-                            .category(detail.getCategory())
-                            .isContainsFree(isContainsFreeGroup(detail.getId()))
-                            .build())
-                    .collect(Collectors.toList());
+                        .map(detail -> LectureListResDto.builder()
+                                .id(detail.getId())
+                                .title(detail.getTitle())
+                                .memberName(detail.getMemberName())
+                                .memberId(detail.getMemberId())
+                                .image(detail.getImage())
+                                .category(detail.getCategory())
+                                .isContainsFree(isContainsFreeGroup(detail.getId()))
+                                .build())
+                        .collect(Collectors.toList());
 
-            // PageImpl로 페이지네이션 적용하여 반환
-            return new PageImpl<>(lectureList, pageable, searchResults.size());
-
+                // PageImpl로 페이지네이션 적용하여 반환
+                return new PageImpl<>(lectureList, pageable, searchResults.size());
+            }
         } catch (IOException | InterruptedException e) {
             // 예외 발생 시 로그 출력 및 빈 페이지 반환
             throw new IllegalArgumentException(e);
@@ -179,13 +175,10 @@ public class LectureService {
         return false;
     }
 
-    // Update: limitPeople=0
-//    public void lectureUpdate(LectureUpdateReqDto lectureUpdateReqDto, List<LectureGroupReqDto> lectureGroupReqDtos){
-//        Long memberId = Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
-//        if (memberId == )
-//    }
-
-    // Delete: role=TUTOR & limitPeople=0
+    // 검색어 추천 메서드
+    public List<String> getSuggestions(String keyword) throws IOException, InterruptedException {
+        return openSearchService.getSuggestions(keyword);
+    }
 
     public Page<LectureListResDto> showLectureList(LectureSearchDto searchDto, Pageable pageable) {
         Specification<Lecture> specification = new Specification<Lecture>() {
@@ -220,11 +213,6 @@ public class LectureService {
         return lectures.map(Lecture::fromEntityToLectureListResDto);
     }
 
-
-
-//    public Page<LectureDetailResDto> showLectureStatusList(){
-//
-//    }
 
     //튜터 - 자신의 강의 리스트
     public Page<LectureListResDto> showMyLectureList(LectureSearchDto searchDto, Pageable pageable) {
@@ -273,6 +261,8 @@ public class LectureService {
         MemberScoreResDto memberScoreResDto = objectMapper.convertValue(commonResDto.getResult(), MemberScoreResDto.class);
         BigDecimal avgScore = memberScoreResDto.getAvgScore();
 
+        lecture.increaseCount();
+        lectureRepository.save(lecture);
         return lecture.fromEntityToLectureDetailResDto(avgScore);
     }
 
@@ -310,7 +300,7 @@ public class LectureService {
             List<GroupTime> groupTimeList = groupTimeRepository.findByLectureGroupId(a.getId());
             StringBuilder groupTitle = new StringBuilder();
             for(GroupTime groupTime : groupTimeList){
-                groupTitle.append(groupTime.getLectureDay()+" "+groupTime.getStartTime()+"-"+groupTime.getEndTime()+"  /  ");
+                groupTitle.append(changeLectureDayKorean(groupTime.getLectureDay())+" "+groupTime.getStartTime()+"~"+groupTime.getEndTime()+"  /  ");
             }
 
             if (groupTitle.length() > 0) {
@@ -318,20 +308,33 @@ public class LectureService {
             }
 
             String memberName = null;
+            LocalDate startDate = null;
+            LocalDate endDate = null;
             if(isAvailable.equals("N") && a.getLimitPeople()==1){
                 //진행중인 과외인 경우
                 if(!lectureApplyRepository.findByLectureGroupAndStatusAndDelYn(a, Status.ADMIT, "N").isEmpty()){
                     LectureApply lectureApply = lectureApplyRepository.findByLectureGroupAndStatusAndDelYn(a, Status.ADMIT, "N").get(0);
                     memberName = lectureApply.getMemberName();
+                    startDate = a.getStartDate();
+                    endDate = a.getEndDate();
                 }
-
-
             }
+            int limitPeople = 0;
+            if(a.getLecture().getLectureType() == LectureType.LECTURE){
+                limitPeople = a.getLimitPeople();
+                startDate = a.getStartDate();
+                endDate = a.getEndDate();
+            }
+
 
             return LectureGroupListResDto.builder()
                     .title(groupTitle.toString())
                     .lectureGroupId(a.getId())
                     .memberName(memberName)
+                    .price(a.getPrice())
+                    .limitPeople(limitPeople)
+                    .startDate(startDate)
+                    .endDate(endDate)
                     .build();
         });
 
@@ -340,29 +343,33 @@ public class LectureService {
 
     // 강의 수정
     @Transactional
-    public LectureDetailResDto lectureUpdate(Long id, LectureUpdateReqDto dto){
+    public LectureDetailResDto lectureUpdate(Long id, LectureUpdateReqDto dto, MultipartFile image){
         Lecture lecture = lectureRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Lecture is not found"));
 
-        if (dto.getTitle() != null) {
-            lecture.updateTitle(dto.getTitle());
-        }
-        if (dto.getContents() != null) {
-            lecture.updateContents(dto.getContents());
-        }
-        if (dto.getImage() != null) {
-            lecture.updateImage(dto.getImage());
-        }
-        if (dto.getCategory() != null) {
-            lecture.updateCategory(dto.getCategory());
-        }
+//        if (dto.getTitle() != null) {
+//            lecture.updateTitle(dto.getTitle());
+//        }
+//        if (dto.getContents() != null) {
+//            lecture.updateContents(dto.getContents());
+//        }
+//        if (dto.getImage() != null) {
+//            lecture.updateImage(dto.getImage());
+//        }
+//        if (dto.getCategory() != null) {
+//            lecture.updateCategory(dto.getCategory());
+//        }
 
-        // OpenSearch에 데이터 동기화
-        try {
-            openSearchService.registerLecture(lecture.fromEntityToLectureResDto());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        String imageUrl = s3Service.uploadFile(image, "lecture");
+        lecture.updateLecture(dto, imageUrl);
+
+
+//        // OpenSearch에 데이터 동기화
+//        try {
+//            openSearchService.registerLecture(lecture.fromEntityToLectureResDto());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
 
         return lecture.fromEntityToLectureResDto();
     }
@@ -410,7 +417,7 @@ public class LectureService {
 
         // LectureApply가 하나라도 존재한다면 수정 불가
         if (!lectureGroup.getLectureApplies().isEmpty()) {
-            throw new IllegalArgumentException("LectureApply가 존재하여 Lecture를 삭제할 수 없습니다.");
+            throw new IllegalArgumentException("LectureApply가 존재하여 Lecture를 수정할 수 없습니다.");
         }
         if (dto.getPrice() != null) {
             lectureGroup.updatePrice(dto.getPrice());
@@ -420,6 +427,9 @@ public class LectureService {
         }
         if (dto.getAddress() != null) {
             lectureGroup.updateAddress(dto.getAddress());
+        }
+        if (dto.getDetailAddress() != null) {
+            lectureGroup.updateDetailAddress(dto.getDetailAddress());
         }
         if (dto.getStartDate() != null && dto.getEndDate() != null) {
             lectureGroup.updateDate(dto.getStartDate(), dto.getEndDate());
@@ -479,7 +489,7 @@ public class LectureService {
         lectureRepository.save(lecture);
     }
 
-    @KafkaListener(topics = "lecture-status-update", groupId = "lecture-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "lecture-status-update", groupId = "lecture-status-update", containerFactory = "kafkaListenerContainerFactory")
     @Transactional
     public void lectureStatusUpdateFromKafka(String message) {
         try {
@@ -495,8 +505,23 @@ public class LectureService {
             // JSON 메시지를 LectureStatusUpdateDto로 변환
             LectureStatusUpdateDto statusUpdateDto = objectMapper.readValue(message, LectureStatusUpdateDto.class);
 
-            // 상태 업데이트
+            Lecture lecture = lectureRepository.findById(statusUpdateDto.getLectureId()).orElseThrow(
+                    ()-> new EntityNotFoundException("상태 업데이트 중 문제가 발생했습니다."));
+            if(lecture.getLectureType().equals(LectureType.LECTURE)){
+                updateLectureStatus(statusUpdateDto);
+                List<LectureGroup> lectureGroups = lecture.getLectureGroups();
+                for(LectureGroup lectureGroup: lectureGroups){
+                    ChatRoomCheckDto chatRoomCheckDto = ChatRoomCheckDto.builder()
+                            .lectureGroupId(lectureGroup.getId())
+                            .tuteeId(lecture.getMemberId())
+                            .build();
+                    lectureChatRoomService.tutorLessonChatCheckOrCreate(chatRoomCheckDto);
+                }
+            }
             updateLectureStatus(statusUpdateDto);
+            redisStreamProducer.publishMessage(
+                    lecture.getMemberId().toString(), "강의 승인", lecture.getTitle() + " 강의가 승인되었습니다.", "메롱");
+            // 상태 업데이트
 //            System.out.println("Kafka 메시지 처리 완료: " + statusUpdateDto);
         } catch (JsonProcessingException e) {
             System.err.println("Kafka 메시지 변환 중 오류 발생: " + e.getMessage());
@@ -510,20 +535,21 @@ public class LectureService {
 
         List<GroupTimeResDto> groupTimesDto = new ArrayList<>();
 
-        for(LectureGroup lectureGroup: lectureGroups){
-            for(GroupTime groupTime: lectureGroup.getGroupTimes()){
+        for (LectureGroup lectureGroup : lectureGroups) {
+            for (GroupTime groupTime : lectureGroup.getGroupTimes()) {
                 GroupTimeResDto groupTimeResDto = GroupTimeResDto.builder()
                         .memberId(lecture.getMemberId())
                         .groupTimeId(groupTime.getId())
                         .lectureGroupId(lectureGroup.getId())
                         .lectureType(lecture.getLectureType().toString())
-                        .lectureDay(groupTime.getLectureDay().name()) // MON, TUE, 등
-                        .startTime(groupTime.getStartTime().toString()) // HH:mm
-                        .endTime(groupTime.getEndTime().toString()) // HH:mm
-                        .startDate(lectureGroup.getStartDate().toString()) // 강의 시작 날짜
-                        .endDate(lectureGroup.getEndDate().toString()) // 강의 종료 날짜
-                        .schedulerTitle(lectureGroup.getLecture().getTitle()) // 강의 제목을 일정 제목으로 설정
-                        .alertYn('N') // 기본값 'N'
+                        .lectureDay(groupTime.getLectureDay().name())
+                        .startTime(groupTime.getStartTime().toString())
+                        .endTime(groupTime.getEndTime().toString())
+                        // startDate가 null일 때 null 처리를 위한 조건 추가
+                        .startDate(lectureGroup.getStartDate() != null ? lectureGroup.getStartDate().toString() : "No start date")
+                        .endDate(lectureGroup.getEndDate() != null ? lectureGroup.getEndDate().toString() : "No end date")
+                        .schedulerTitle(lectureGroup.getLecture().getTitle())
+                        .alertYn('N')
                         .build();
 
                 groupTimesDto.add(groupTimeResDto);
@@ -569,16 +595,29 @@ public class LectureService {
     public LectureHomeResDto LectureHomeInfoGet(Long lectureGroupId){
         // 강의 그룹 정보
         LectureGroup lectureGroup = lectureGroupRepository.findById(lectureGroupId).orElseThrow(()->new EntityNotFoundException("해당 그룹이 없습니다."));
+
+        List<LectureApply> lectureApplyList = lectureApplyRepository.findByLectureGroupAndStatusAndDelYn(lectureGroup, Status.ADMIT, "N");
+        Long loginMember = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+
         LectureHomeResDto dto = LectureHomeResDto.builder()
                 .groupId(lectureGroup.getId())
                 .limitPeople(lectureGroup.getLimitPeople())
                 .address(lectureGroup.getAddress())
-//                .latitude(lectureGroup.getLatitude())
-//                .longitude(lectureGroup.getLongitude())
+                .detailAddress(lectureGroup.getDetailAddress())
+                .price(lectureGroup.getPrice())
                 .startDate(lectureGroup.getStartDate())
+                .endDate(lectureGroup.getEndDate())
                 .build();
         // 강의 그룹의 강의 id -> 강의 정보 불러오기
         Lecture lecture = lectureRepository.findById(lectureGroup.getLecture().getId()).orElseThrow(()->new EntityNotFoundException("해당 강의 및 과외가 없습니다."));
+
+        List<Long> memberList = lectureApplyList.stream()
+                .map(LectureApply::getMemberId)
+                .collect(Collectors.toList());
+        memberList.add(lecture.getMemberId());
+
+        if(!memberList.contains(loginMember)) throw new IllegalArgumentException("접근할 수 없는 강의 그룹입니다");
+
         dto.setLectureId(lecture.getId());
         dto.setTitle(lecture.getTitle());
         dto.setContents(lecture.getContents());
@@ -591,33 +630,77 @@ public class LectureService {
         // 단체 채팅방
         List<LectureChatRoom> lectureChatRoomList = lectureChatRoomRepository.findByLectureGroupAndDelYn(lectureGroup,"N");
         // Todo 채팅방 id는 좀 더 생각 필요
-        dto.setChatRoomId(lectureChatRoomList.get(0).getId());
+        if(!lectureChatRoomList.isEmpty())dto.setChatRoomId(lectureChatRoomList.get(0).getId());
         // 강의 그룹 시간 list
         List<GroupTimeResDto> groupTimeResDtos = new ArrayList<>();
+        int totalDayCount=0;
+        int pastDayCount=0;
+        LocalDate today = LocalDate.now();
+
         for(GroupTime groupTime: lectureGroup.getGroupTimes()){
-            GroupTimeResDto groupTimeResDto = GroupTimeResDto.builder()
-                    .memberId(lecture.getMemberId())
-                    .groupTimeId(groupTime.getId())
-                    .lectureGroupId(lectureGroup.getId())
-                    .lectureType(lecture.getLectureType().toString())
-                    .lectureDay(groupTime.getLectureDay().name()) // MON, TUE, 등
-                    .startTime(groupTime.getStartTime().toString()) // HH:mm
-                    .endTime(groupTime.getEndTime().toString()) // HH:mm
-                    .startDate(lectureGroup.getStartDate().toString()) // 강의 시작 날짜
-                    .endDate(lectureGroup.getEndDate().toString()) // 강의 종료 날짜
-                    .schedulerTitle(lectureGroup.getLecture().getTitle()) // 강의 제목을 일정 제목으로 설정
-                    .alertYn('N') // 기본값 'N'
-                    .build();
-            groupTimeResDtos.add(groupTimeResDto);
+            if (groupTime.getDelYn().equals("N") ) {
+                GroupTimeResDto groupTimeResDto = GroupTimeResDto.builder()
+                        .memberId(lecture.getMemberId())
+                        .groupTimeId(groupTime.getId())
+                        .lectureGroupId(lectureGroup.getId())
+                        .lectureType(lecture.getLectureType().toString())
+                        .lectureDay(groupTime.getLectureDay().name()) // MON, TUE, 등
+                        .startTime(groupTime.getStartTime().toString()) // HH:mm
+                        .endTime(groupTime.getEndTime().toString()) // HH:mm
+                        .startDate(lectureGroup.getStartDate().toString()) // 강의 시작 날짜
+                        .endDate(lectureGroup.getEndDate().toString()) // 강의 종료 날짜
+                        .schedulerTitle(lectureGroup.getLecture().getTitle()) // 강의 제목을 일정 제목으로 설정
+                        .alertYn('N') // 기본값 'N'
+                        .build();
+                groupTimeResDtos.add(groupTimeResDto);
+
+                // 요일 수업 개수 계산 (모든 GroupTime의 요일을 합산)
+                totalDayCount += countDaysBetweenDates(lectureGroup.getStartDate(), lectureGroup.getEndDate(), groupTime.getLectureDay());
+
+                // 현재 날짜까지의 수업 개수 계산
+                pastDayCount += countDaysBetweenDates(lectureGroup.getStartDate(), today, groupTime.getLectureDay());
+            }
+
         }
+        groupTimeResDtos.sort(Comparator.comparing((GroupTimeResDto g) -> DayOfWeek.valueOf(g.getLectureDay()).ordinal())
+                .thenComparing(g -> LocalTime.parse(g.getStartTime())));
+
+        dto.setTotalDayCount(totalDayCount);
+        dto.setPastDayCount(pastDayCount);
         dto.setLectureGroupTimes(groupTimeResDtos);
         return dto;
     }
+    public int countDaysBetweenDates(LocalDate startDate, LocalDate endDate, LectureDay lectureDay) {
+        DayOfWeek targetDayOfWeek = DayOfWeek.valueOf(lectureDay.name());
 
+        int count = 0;
+        LocalDate date = startDate;
+
+        // 시작일부터 종료일까지 날짜 순회
+        while (!date.isAfter(endDate)) {
+            if (date.getDayOfWeek() == targetDayOfWeek) {
+                count++;
+            }
+            date = date.plusDays(1);
+        }
+
+        return count;
+    }
 
     public LectureTitleAndImageResDto getTitleAndThumbnail(Long id){
         Lecture lecture = lectureRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("강의 정보 가져오기에 실패했습니다."));
+        return LectureTitleAndImageResDto.builder()
+                .title(lecture.getTitle())
+                .image(lecture.getImage())
+                .build();
+    }
+
+    public LectureTitleAndImageResDto getTitleAndThumbnailByGroupId(Long id){
+        LectureGroup lectureGroup = lectureGroupRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("강의 정보 가져오기에 실패했습니다."));
+        Lecture lecture = lectureGroup.getLecture();
+
         return LectureTitleAndImageResDto.builder()
                 .title(lecture.getTitle())
                 .image(lecture.getImage())
@@ -640,8 +723,8 @@ public class LectureService {
         return LectureGroupResDto.builder()
                 .title(lectureGroup.getLecture().getTitle())
                 .image(lectureGroup.getLecture().getImage())
-//                .longitude(lectureGroup.getLongitude())
-//                .latitude(lectureGroup.getLatitude())
+                .address(lectureGroup.getAddress())
+                .detailAddress(lectureGroup.getDetailAddress())
                 .times(timeResDtos)
                 .remaining(lectureGroup.getRemaining())
                 .tutorName(lectureGroup.getLecture().getMemberName())
@@ -655,7 +738,7 @@ public class LectureService {
         Lecture lecture = lectureRepository.findById(lectureId).orElseThrow(
                 () -> new EntityNotFoundException("강의 정보 가져오기 실패"));
 
-        List<LectureGroup> lectureGroups = lectureGroupRepository.findByLectureId(lectureId);
+        List<LectureGroup> lectureGroups = lectureGroupRepository.findByLectureIdAndDelYn(lectureId, "N");
         List<LectureGroupsResDto> lectureGroupsResDtos = new ArrayList<>();
 
         for (LectureGroup lectureGroup : lectureGroups) {
@@ -676,7 +759,8 @@ public class LectureService {
                     .isAvailable(lectureGroup.getIsAvailable())
                     .remaining(lectureGroup.getRemaining())
                     .price(lectureGroup.getPrice())
-//                    .address(lectureGroup.getAddress)
+                    .address(lectureGroup.getAddress())
+                    .detailAddress(lectureGroup.getDetailAddress())
                     .startDate(lectureGroup.getStartDate())
                     .endDate(lectureGroup.getEndDate())
                     .build();
@@ -685,6 +769,18 @@ public class LectureService {
         }
 
         return lectureGroupsResDtos;
+    }
+
+    public String changeLectureDayKorean(LectureDay lectureDay){
+        return switch (lectureDay) {
+            case MONDAY -> "월";
+            case TUESDAY -> "화";
+            case WEDNESDAY -> "수";
+            case THURSDAY -> "목";
+            case FRIDAY -> "금";
+            case SATURDAY -> "토";
+            case SUNDAY -> "일";
+        };
     }
 
 }

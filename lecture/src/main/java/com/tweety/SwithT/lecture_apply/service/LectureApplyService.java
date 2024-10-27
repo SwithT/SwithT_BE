@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.common.dto.MemberNameResDto;
+import com.tweety.SwithT.common.dto.MemberProfileResDto;
 import com.tweety.SwithT.common.service.MemberFeign;
 import com.tweety.SwithT.common.service.RedisStreamProducer;
 import com.tweety.SwithT.lecture.domain.GroupTime;
 import com.tweety.SwithT.lecture.domain.Lecture;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
+import com.tweety.SwithT.lecture.domain.ReviewStatus;
 import com.tweety.SwithT.lecture.dto.GroupTimeResDto;
 import com.tweety.SwithT.lecture.dto.TuteeMyLectureListResDto;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
@@ -111,8 +113,10 @@ public class LectureApplyService {
             throw new EntityNotFoundException("해당 과외가 존재하지 않습니다.");
         });
 
-        return SingleLectureApplyAfterResDto.builder().lectureTitle(lecture.getTitle()).build();
+        redisStreamProducer.publishMessage(lecture.getMemberId().toString(), "수강 신청",
+                lecture.getTitle() + " 강의에 새로운 수강 신청이 있습니다.", memberName + "수강생");
 
+        return SingleLectureApplyAfterResDto.builder().lectureTitle(lecture.getTitle()).build();
 
     }
 
@@ -147,10 +151,26 @@ public class LectureApplyService {
                     dto.setChatRoomId(roomId);
                 }
             }
+
+            //튜티 프로필 이미지
+            CommonResDto commonResDto = memberFeign.getMemberProfileById(dto.getMemberId());
+            ObjectMapper objectMapper = new ObjectMapper();
+            MemberProfileResDto memberProfileResDto = objectMapper.convertValue(commonResDto.getResult(), MemberProfileResDto.class);
+            dto.setTuteeProfileImage(memberProfileResDto.getImage());
         }
         return result;
     }
 
+    @Transactional
+    public ReviewStatus updateReviewStatus(Long applyId){
+
+        LectureApply lectureApply = lectureApplyRepository.findByIdAndDelYn(applyId, "N").orElseThrow(()->{
+            throw new EntityNotFoundException("id에 맞는 수강을 찾을 수 없습니다.");
+        });
+
+        lectureApply.updateReviewStatus(ReviewStatus.Y); // JPA가 알아서 체킹?
+        return lectureApply.getReviewStatus();
+    }
     //튜터 - 튜티의 신청 승인
     @Transactional
     public String singleLecturePaymentRequest(Long id) {
@@ -162,13 +182,19 @@ public class LectureApplyService {
         if(!lectureApplyRepository.findByLectureGroupAndStatusAndDelYn(lectureGroup, Status.WAITING, "N").isEmpty()){
             throw new IllegalArgumentException("결제 대기 중인 튜티가 존재합니다.");
         }
+        if(lectureApply.getLectureGroup().getPrice()==0){
+            lectureApply.updateStatus(Status.ADMIT);
+            updateFreeLectureApplyStatus(id);
+            redisStreamProducer.publishMessage(lectureApply.getMemberId().toString(),
+                    "강의 승인", lectureGroup.getLecture().getTitle()+" 강의가 승인되었습니다. 스케줄을 확인해보세요!", lectureApply.getId().toString());
+        }else{
+            lectureApply.updateStatus(Status.WAITING);
 
-        lectureApply.updateStatus(Status.WAITING);
+            //결제 요청 보내기
+            redisStreamProducer.publishMessage(lectureApply.getMemberId().toString(),
+                    "결제요청", lectureGroup.getLecture().getTitle()+"에서 결제 요청을 했습니다.", lectureApply.getId().toString());
 
-        //결제 요청 보내기
-        redisStreamProducer.publishMessage(lectureApply.getMemberId().toString(),
-                "결제요청", "수학천재가 되는 길에서 결제 요청을 했습니다.", lectureApply.getId().toString());
-
+        }
 
         return "튜터가 해당 수강신청을 승인했습니다.";
     }
@@ -199,11 +225,17 @@ public class LectureApplyService {
                 if (status != null && !status.isEmpty()) {
                     predicates.add(criteriaBuilder.equal(root.get("status"), status));
                 }
-                Predicate[] predicateArr = new Predicate[predicates.size()];
-                for(int i=0; i<predicateArr.length; i++){
-                    predicateArr[i] = predicates.get(i);
-                }
-                return criteriaBuilder.and(predicateArr);
+//                Predicate[] predicateArr = new Predicate[predicates.size()];
+//                for(int i=0; i<predicateArr.length; i++){
+//                    predicateArr[i] = predicates.get(i);
+//                }
+
+                query.where(predicates.toArray(new Predicate[0]));
+                query.orderBy(criteriaBuilder.desc(root.get("createdTime")));
+//                return criteriaBuilder.and(predicateArr);
+                return query.getRestriction();
+
+
             }
         };
         Page<LectureApply> lectureApplyPage = lectureApplyRepository.findAll(specification, pageable);
@@ -214,10 +246,15 @@ public class LectureApplyService {
                             .startDate(lectureApply.getStartDate())
                             .endDate(lectureApply.getEndDate())
                             .tutorName(lectureApply.getLectureGroup().getLecture().getMemberName())
+                            .tutorId(lectureApply.getLectureGroup().getLecture().getMemberId())
                             .price(lectureApply.getLectureGroup().getPrice())
                             .applyId(lectureApply.getId())
                             .lectureGroupId(lectureApply.getLectureGroup().getId())
                             .status(lectureApply.getStatus())
+                            .lectureType(lectureApply.getLectureGroup().getLecture().getLectureType())
+                            .createdTime(lectureApply.getCreatedTime())
+                            .lectureImage(lectureApply.getLectureGroup().getLecture().getImage())
+                            .reviewStatus(lectureApply.getReviewStatus()) //김민성 추가
                     .build());
         }
 
@@ -229,11 +266,8 @@ public class LectureApplyService {
 
     }
 
-    // 강의 신청
-    @Transactional
-    public LectureApplyAfterResDto tuteeLectureApply(Long lectureGroupId, Long memberId, String memberName) throws InterruptedException {
-        synchronized (lock) {
-            LectureGroup lectureGroup = lectureGroupRepository.findByIdAndDelYn(lectureGroupId, "N")
+    public Long lectureAddQueue(Long lectureGroupId, Long memberId, String memberName) throws InterruptedException {
+        LectureGroup lectureGroup = lectureGroupRepository.findByIdAndDelYn(lectureGroupId, "N")
                     .orElseThrow(() -> new EntityNotFoundException("해당 강의는 존재하지 않습니다."));
 
             if (lectureGroup.getIsAvailable().equals("N")) {
@@ -245,41 +279,156 @@ public class LectureApplyService {
                 throw new RuntimeException("이미 신청한 강의입니다.");
             }
 
+            // 대기열에 추가
             final long now = System.currentTimeMillis();
             redisTemplate.opsForZSet().add(lectureGroupId.toString(), memberId, now);
-            log.info("대기열에 추가 - {}번 유저 ({}초)", memberId, now);
+            Long memberRank = redisTemplate.opsForZSet().rank(lectureGroupId.toString(), memberId);
+            System.out.println("대기열에 추가" + memberRank);
+            log.info("대기열에 추가 - {}번 유저 ({}초) / {}위", memberId, now, memberRank);
 
-            Set<Object> queue = redisTemplate.opsForZSet().range(lectureGroupId.toString(), 0, 0); // 앞에 있는 사람
+//
+//        while (memberRank != 0) { // Null발생
+//
+//            String rank = String.valueOf(memberRank);
+//            // 메시지 발행
+//            redisStreamProducer.publishWaitingMessage(memberId.toString(), "WAITING", lectureGroupId.toString() + "번 강의 대기열 조회", rank);
+//
+//            // 3초 대기
+//            Thread.sleep(3000);
+//
+//            // 순번 업데이트
+//            memberRank = redisTemplate.opsForZSet().rank(lectureGroupId.toString(), memberId.toString());
+//            System.out.println("순번 업데이트" + memberRank);
+//        }
+//
+//        // 대기열 순번이 0일 때 마지막 메시지 발행
+//        redisStreamProducer.publishWaitingMessage(memberId.toString(), "WAITING-SUCCESS", lectureGroupId.toString() + "번 강의 신청 완료", "0");
 
-            if (queue != null && !queue.isEmpty()) {
-                // 앞에 있는 유저부터 큐에서 제거
-                Object frontUser = queue.iterator().next();
-//                System.out.println("queue에서 가장 앞에 있는 유저: " + frontUser);
-                redisTemplate.opsForZSet().remove(lectureGroupId.toString(), frontUser);
+        return memberRank;
+    }
 
-                // 남은 자리수 감소 및 처리
-                if (lectureGroup.getRemaining() > 0) {
-                    lectureGroup.decreaseRemaining();
-                    lectureGroupRepository.saveAndFlush(lectureGroup);
 
-                    Long user = (frontUser instanceof Integer) ? ((Integer) frontUser).longValue() : (Long) frontUser;
+    public Long lectureGetOrder( Long lectureGroupId, Long memberId) throws InterruptedException {
 
-                    // 대기열 상태 저장
-                    lectureApplyRepository.save(LectureApply.builder()
-                            .lectureGroup(lectureGroup)
-                            .memberId(user)
-                            .memberName(memberName)
-                            .status(Status.STANDBY)
-                            .build());
+        String queueKey = lectureGroupId.toString();
+        Set<Object> queue = redisTemplate.opsForZSet().range(queueKey, 0, -1);  // 대기열 내부에 있는 유저 정보 갖고옴
 
-                    log.info("현재 대기열 상태 업데이트 완료.");
-                } else {
-                    throw new RuntimeException("남은 자리가 없습니다.");
-                }
-            }
-            return LectureApplyAfterResDto.builder().lectureGroupId(lectureGroup.getId()).build();
+        Long memberRank = redisTemplate.opsForZSet().rank(queueKey, memberId);
+
+        for (Object people : queue) {
+            Long rank = redisTemplate.opsForZSet().rank(queueKey, people);
+            log.info("'{}'번 유저의 현재 대기열은 {}명 남았습니다.", people, rank);
+        }
+
+        if (memberRank != null) {
+            return memberRank;
+        } else {
+            return -1L; // 요청한 멤버가 대기열에 없으면 -1 반환
         }
     }
+
+    public Long lectureDeleteQueue(Long lectureGroupId, Long memberId){
+        // Zset에서 해당 memberId를 삭제
+        redisTemplate.opsForZSet().remove(lectureGroupId.toString(), memberId);
+        System.out.println("Removed memberId: " + memberId + " from Zset: " + lectureGroupId);
+        return memberId;
+    }
+
+//    @Scheduled(fixedRate = 10000)
+//    public void waitingScheduler() {
+//
+//        // Redis에 저장된 Zset들의 키 리스트 (필요하다면 따로 관리하는 로직 추가)
+//        Set<String> keys = redisTemplate.keys("*"); // 모든 키 가져오기
+//
+//        if (keys.size() != 0) {
+//            System.out.println("keys: " + keys);
+//            for (String key : keys) {
+//                // Zset인 경우에만 처리
+//                if (redisTemplate.type(key).code().equals("zset")) {
+//
+//                    // Zset에서 첫 번째 요소(0번째 인덱스)를 가져옴
+//                    Set<ZSetOperations.TypedTuple<Object>> firstElement = redisTemplate.opsForZSet().rangeWithScores(key, 0, 0);
+//
+//                    if (firstElement != null && !firstElement.isEmpty()) {
+//                        ZSetOperations.TypedTuple<Object> user = firstElement.iterator().next();
+//                        String memberId = String.valueOf(user.getValue()); // 유저 ID 추출
+//
+//                        // 해당 유저에게 메시지 발송
+//                        redisStreamProducer.publishWaitingMessage(
+//                                user.getValue()+"번 유저",
+//                                "WAITING-SUCCESS",
+//                                key + "번 강의 신청 완료",
+//                                "0"
+//                        );
+//                        System.out.println("Message sent to memberId: " + memberId + " for lectureGroup: " + key);
+//
+//                        // Zset에서 첫 번째 요소(0번째 인덱스) 삭제
+//                        redisTemplate.opsForZSet().removeRange(key, 0, 0);
+//                        System.out.println("Removed first element from Zset: " + key);
+//                    }
+//                }
+//            }
+//        } else {
+//            System.out.println("waitingScheduler...");
+//        }
+//    }
+
+
+//    // 강의 신청
+//    @Transactional
+//    public LectureApplyAfterResDto tuteeLectureApply(Long lectureGroupId, Long memberId, String memberName) throws InterruptedException {
+////        synchronized (lock) {
+//            LectureGroup lectureGroup = lectureGroupRepository.findByIdAndDelYn(lectureGroupId, "N")
+//                    .orElseThrow(() -> new EntityNotFoundException("해당 강의는 존재하지 않습니다."));
+//
+//            if (lectureGroup.getIsAvailable().equals("N")) {
+//                throw new RuntimeException("해당 강의는 신청할 수 없습니다.");
+//            }
+//
+//            List<LectureApply> lectureApplyList = lectureApplyRepository.findByMemberIdAndLectureGroup(memberId, lectureGroup);
+//            if (!lectureApplyList.isEmpty()) {
+//                throw new RuntimeException("이미 신청한 강의입니다.");
+//            }
+//
+//            // 대기열에 추가
+//            final long now = System.currentTimeMillis();
+//            redisTemplate.opsForZSet().add(lectureGroupId.toString(), memberId, now);
+//            log.info("대기열에 추가 - {}번 유저 ({}초)", memberId, now);
+//
+//
+////            // 맨 앞 유저부터 대기열에서 제거
+////            Set<Object> queue = redisTemplate.opsForZSet().range(lectureGroupId.toString(), 0, 0); // 앞에 있는 사람
+////
+////            if (queue != null && !queue.isEmpty()) {
+////                // 앞에 있는 유저부터 큐에서 제거
+////                Object frontUser = queue.iterator().next();
+//////                System.out.println("queue에서 가장 앞에 있는 유저: " + frontUser);
+////                redisTemplate.opsForZSet().remove(lectureGroupId.toString(), frontUser);
+//////                redisStreamProducer.publishWaitingMessage();
+////
+////                // 남은 자리수 감소 및 처리
+////                if (lectureGroup.getRemaining() > 0) {
+////                    lectureGroup.decreaseRemaining();
+////                    lectureGroupRepository.saveAndFlush(lectureGroup);
+////
+////                    Long user = (frontUser instanceof Integer) ? ((Integer) frontUser).longValue() : (Long) frontUser;
+////
+////                    // 대기열 상태 저장
+////                    lectureApplyRepository.save(LectureApply.builder()
+////                            .lectureGroup(lectureGroup)
+////                            .memberId(user)
+////                            .memberName(memberName)
+////                            .status(Status.STANDBY)
+////                            .build());
+////
+////                    log.info("현재 대기열 상태 업데이트 완료.");
+////                } else {
+////                    throw new RuntimeException("남은 자리가 없습니다.");
+////                }
+////            }
+//            return LectureApplyAfterResDto.builder().lectureGroupId(lectureGroup.getId()).build();
+////        }
+//    }
 
     public LectureGroupPayResDto getLectureGroupByApplyId(Long id){
         LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
@@ -296,7 +445,7 @@ public class LectureApplyService {
     @Transactional
     public void updateLectureApplyStatus(Long id, String message){
         LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
-                ()-> new EntityNotFoundException("수강 정보 불러오기 실패"));
+                   ()-> new EntityNotFoundException("수강 정보 불러오기 실패"));
 
         lectureApply.updatePaidStatus(message);
         if(message.equals("paid")){
@@ -304,22 +453,81 @@ public class LectureApplyService {
             lectureGroup.decreaseRemaining();
         }
 
-        Long memberId = lectureApply.getMemberId();
-        if(lectureApply.getLectureGroup().getLecture().getLectureType().equals("LESSON")){
-            List<LectureChatRoom> lectureChatRooms = lectureChatRoomRepository.findByLectureGroupAndDelYn
+        Long paidTuteeId = lectureApply.getMemberId();
+//        System.out.println("결제한 튜티: " + paidTuteeId);
+        Long tutorId = lectureApply.getLectureGroup().getLecture().getMemberId();
+        if(lectureApply.getLectureGroup().getLecture().getLectureType().toString().equals("LESSON")){
+            lectureApply.getLectureGroup().updateIsAvailable("N");
+            List<LectureChatRoom> chatRooms = lectureChatRoomRepository.findByLectureGroupAndDelYn
                     (lectureApply.getLectureGroup(), "N");
-            for(LectureChatRoom lectureChatRoom: lectureChatRooms){
-                List<LectureChatParticipants> lectureChatParticipantsList = lectureChatParticipantsRepository.findByLectureChatRoom(lectureChatRoom);
-                for(LectureChatParticipants lectureChatParticipants: lectureChatParticipantsList){
-                    if(lectureChatParticipants.getMemberId() != memberId){
-                        lectureChatParticipants.updateDelYn();
+            for(LectureChatRoom chatRoom: chatRooms){
+//                System.out.println("검토할 채팅방: " + chatRoom.getId());
+                List<LectureChatParticipants> participants = lectureChatParticipantsRepository.findByLectureChatRoom(chatRoom);
+                boolean isPaidChatRoom = false;
+                for(LectureChatParticipants participant: participants){
+//                    System.out.println("검토할 참여자: " + participant.getMemberId());
+                    if(participant.getMemberId().equals(paidTuteeId)){
+                        isPaidChatRoom = true;
+                        break;
                     }
                 }
+                if(isPaidChatRoom){
+                    continue;
+                }
+
+                for(LectureChatParticipants participant : participants){
+                    participant.updateDelYn();
+                }
+                chatRoom.updateDelYn();
             }
+            LectureGroup lectureGroup = lectureApply.getLectureGroup();
+            lectureGroup.updateDate(lectureApply.getStartDate(),lectureApply.getEndDate());
+            lectureGroup.updateAddress(lectureApply.getLocation());
+            lectureGroup.updateDetailAddress(lectureApply.getDetailAddress());
         }
 
         lectureApplyRepository.save(lectureApply);
-        updateSchedule(lectureApply.getLectureGroup(), memberId);
+        updateSchedule(lectureApply, paidTuteeId);
+        updateSchedule(lectureApply, tutorId);
+    }
+
+    @Transactional
+    public void updateLectureStatus(Long lectureGroupId, Long memberId){
+        LectureGroup lectureGroup = lectureGroupRepository.findById(lectureGroupId).orElseThrow(
+                ()-> new EntityNotFoundException("강의 그룹 정보를 불러오는 데 실패했습니다."));
+
+        updateSchedule(lectureGroup, memberId);
+    }
+
+    public void updateSchedule(LectureApply lectureApply, Long memberId){
+        LectureGroup lectureGroup = lectureApply.getLectureGroup();
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        List<GroupTimeResDto> groupTimesDto = new ArrayList<>();
+
+        for(GroupTime groupTime: lectureGroup.getGroupTimes()){
+            GroupTimeResDto groupTimeResDto = GroupTimeResDto.builder()
+                    .memberId(memberId)
+                    .lectureGroupId(lectureGroup.getId())
+                    .lectureDay(groupTime.getLectureDay().name()) // MON, TUE, 등
+                    .startTime(groupTime.getStartTime().toString()) // HH:mm
+                    .endTime(groupTime.getEndTime().toString()) // HH:mm
+                    .startDate(lectureApply.getStartDate().toString()) // 강의 시작 날짜
+                    .endDate(lectureApply.getEndDate().toString()) // 강의 종료 날짜
+                    .schedulerTitle(lectureGroup.getLecture().getTitle()) // 강의 제목을 일정 제목으로 설정
+                    .alertYn('N') // 기본값 'N'
+                    .build();
+            groupTimesDto.add(groupTimeResDto);
+        }
+        try {
+            String message = objectMapper.writeValueAsString(groupTimesDto);
+
+            kafkaTemplate.send("schedule-update", message);  // JSON 문자열 전송
+
+            System.out.println("Kafka 메시지 전송됨: " + message);
+        } catch (JsonProcessingException e) {
+            System.err.println("Kafka 메시지 변환 및 전송 실패: " + e.getMessage());
+        }
     }
 
     public void updateSchedule(LectureGroup lectureGroup, Long memberId){
@@ -339,7 +547,6 @@ public class LectureApplyService {
                     .schedulerTitle(lectureGroup.getLecture().getTitle()) // 강의 제목을 일정 제목으로 설정
                     .alertYn('N') // 기본값 'N'
                     .build();
-
             groupTimesDto.add(groupTimeResDto);
         }
         try {
@@ -353,20 +560,62 @@ public class LectureApplyService {
         }
     }
 
+    @Transactional
+    public void updateFreeLectureApplyStatus(Long id){
+        LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
+                ()-> new EntityNotFoundException("수강 정보 불러오기 실패"));
+
+        lectureApply.updateStatus(Status.ADMIT);
+        LectureGroup lectureGroup = lectureApply.getLectureGroup();
+        lectureGroup.decreaseRemaining();
+
+        Long tuteeId = lectureApply.getMemberId();
+        Long tutorId = lectureApply.getLectureGroup().getLecture().getMemberId();
+        System.out.println(lectureApply.getLectureGroup().getLecture().getLectureType());
+        if(lectureApply.getLectureGroup().getLecture().getLectureType().toString().equals("LESSON")){
+            lectureApply.getLectureGroup().updateIsAvailable("N");
+            List<LectureChatRoom> chatRooms = lectureChatRoomRepository.findByLectureGroupAndDelYn
+                    (lectureApply.getLectureGroup(), "N");
+            for(LectureChatRoom chatRoom: chatRooms){
+//                System.out.println("검토할 채팅방: " + chatRoom.getId());
+                List<LectureChatParticipants> participants = lectureChatParticipantsRepository.findByLectureChatRoom(chatRoom);
+                boolean isPaidChatRoom = false;
+                for(LectureChatParticipants participant: participants){
+//                    System.out.println("검토할 참여자: " + participant.getMemberId());
+                    if(participant.getMemberId().equals(tuteeId)){
+                        isPaidChatRoom = true;
+                        break;
+                    }
+                }
+                if(isPaidChatRoom){
+                    continue;
+                }
+
+                for(LectureChatParticipants participant : participants){
+                    participant.updateDelYn();
+                }
+                chatRoom.updateDelYn();
+            }
+        }
+
+        lectureApplyRepository.save(lectureApply);
+        updateSchedule(lectureApply, tuteeId);
+        updateSchedule(lectureApply, tutorId);
+    }
 
     public int getGroupRemainingFromApplyId(Long id){
-        LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
+        LectureGroup lectureGroup = lectureGroupRepository.findById(id).orElseThrow(
                 ()-> new EntityNotFoundException("수강 정보 불러오기 실패"));
 
-        return lectureApply.getLectureGroup().getRemaining();
+        return lectureGroup.getRemaining();
     }
 
-    public Long getTuteeIdFromApplyId(Long id){
-        LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
-                ()-> new EntityNotFoundException("수강 정보 불러오기 실패"));
-
-        return lectureApply.getLectureGroup().getLecture().getMemberId();
-    }
+//    public Long getTuteeIdFromApplyId(Long id){
+//        LectureApply lectureApply = lectureApplyRepository.findById(id).orElseThrow(
+//                ()-> new EntityNotFoundException("수강 정보 불러오기 실패"));
+//
+//        return lectureApply.getLectureGroup().getLecture().getMemberId();
+//    }
 
     public Page<SingleLectureTuteeListDto> singleLectureTuteeList(Long id, Pageable pageable) {
         Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -374,15 +623,49 @@ public class LectureApplyService {
         LectureGroup lectureGroup = lectureGroupRepository.findByIdAndDelYn(id, "N").orElseThrow(()->{
             throw new EntityNotFoundException("해당 강의 그룹이 없습니다");
         });
+
         Lecture lecture = lectureGroup.getLecture();
-        if(lecture.getMemberId() != memberId){  //소유자가 아닌 경우
-            throw new IllegalArgumentException("접근할 수 없는 강의 그룹입니다");
-        }
+        // lecture apply admit이고 lectureGroupID
+//        if(lecture.getMemberId() != memberId){  //소유자가 아닌 경우
+//            throw new IllegalArgumentException("접근할 수 없는 강의 그룹입니다");
+//        }
+
         List<LectureApply> lectureApplyList = lectureApplyRepository.findByLectureGroupAndStatusAndDelYn(lectureGroup, Status.ADMIT, "N");
+//        PageRequest pageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
+//        int start = (int) pageRequest.getOffset();
+//        int end = Math.min((start + pageRequest.getPageSize()), lectureApplyList.size());
+//        Page<LectureApply> lectureApplyPage = new PageImpl<>(lectureApplyList.subList(start, end), pageRequest, lectureApplyList.size());
+        List<SingleLectureTuteeListDto> dtoList = new ArrayList<>();
+        for(LectureApply apply : lectureApplyList){
+            CommonResDto commonResDto = memberFeign.getMemberProfileById(apply.getMemberId());
+            ObjectMapper objectMapper = new ObjectMapper();
+            MemberProfileResDto memberProfileResDto = objectMapper.convertValue(commonResDto.getResult(), MemberProfileResDto.class);
+            String image = memberProfileResDto.getImage();
+            SingleLectureTuteeListDto dto =  SingleLectureTuteeListDto.builder()
+                    .tuteeName(apply.getMemberName())
+                    .tuteeProfile(image)
+                    .memberId(apply.getMemberId())
+                    .build();
+            dtoList.add(dto);
+        }
         PageRequest pageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
         int start = (int) pageRequest.getOffset();
-        int end = Math.min((start + pageRequest.getPageSize()), lectureApplyList.size());
-        Page<LectureApply> lectureApplyPage = new PageImpl<>(lectureApplyList.subList(start, end), pageRequest, lectureApplyList.size());
-        return lectureApplyPage.map(a->a.fromEntityToSingleLectureTuteeListDto());
+        int end = Math.min((start + pageRequest.getPageSize()), dtoList.size());
+        Page<SingleLectureTuteeListDto> result = new PageImpl<>(dtoList.subList(start, end), pageRequest, dtoList.size());
+//        return lectureApplyPage.map(a->a.fromEntityToSingleLectureTuteeListDto());
+        return result;
+    }
+
+    @Transactional
+    public void lectureRefund(Long lectureGroupId){
+        LectureGroup lectureGroup = lectureGroupRepository.findById(lectureGroupId).orElseThrow(
+                ()-> new EntityNotFoundException("강의 정보를 불러오는 데 실패했습니다."));
+
+        lectureGroup.increseRemaining();
+        if(lectureGroup.getIsAvailable().equals("N")){
+            lectureGroup.updateIsAvailable("Y");
+        }
+
+        kafkaTemplate.send("schedule-cancel-update", lectureGroupId);
     }
 }

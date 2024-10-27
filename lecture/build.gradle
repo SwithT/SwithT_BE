@@ -57,6 +57,10 @@ dependencies {
 	//채팅 의존성
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
+	//shedlock 의존성
+	implementation 'net.javacrumbs.shedlock:shedlock-spring:4.44.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-redis-spring:4.44.0'
+	implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:4.44.0'
 }
 
 ext{

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.common.service.RedisService;
-import com.tweety.SwithT.common.service.S3Service;
+import com.tweety.SwithT.common.Service.S3Service;
 import com.tweety.SwithT.member.domain.Member;
 import com.tweety.SwithT.member.dto.*;
 import com.tweety.SwithT.member.repository.MemberRepository;
@@ -22,6 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 @Transactional
 @Service
 public class MemberService {
+
+
+
 
     private final RedisService redisService;
     private static final String AUTH_EMAIL_PREFIX = "EMAIL_CERTIFICATE : ";
@@ -65,22 +68,22 @@ public class MemberService {
     public Member memberCreate(MemberSaveReqDto memberSaveReqDto,MultipartFile imgFile) {
 
         // 레디스에 인증이 된 상태인지 확인
-        System.out.println(memberSaveReqDto.getAddress()+"서비스단 address");
-
         String chkVerified = redisService.getValues(AUTH_EMAIL_PREFIX + memberSaveReqDto.getEmail());
 
         if (chkVerified == null || !chkVerified.equals("true")) {
             throw new IllegalStateException("이메일 인증이 필요합니다.");
         }
 
+
         memberRepository.findByEmail(memberSaveReqDto.getEmail()).ifPresent(existingMember -> {
             throw new EntityExistsException("이미 존재하는 이메일입니다.");
         });
 
         String encodedPassword = passwordEncoder.encode(memberSaveReqDto.getPassword());
-        String imageUrl = s3Service.uploadFile(imgFile, "member");
+        String imageUrl = s3Service.uploadFile(imgFile, "member",memberSaveReqDto.getGender().toString());
 
         return memberRepository.save(memberSaveReqDto.toEntity(encodedPassword, imageUrl));
+
     }
 
     // 내 이미지 수정

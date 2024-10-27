@@ -15,7 +15,6 @@ import java.util.List;
 @NoArgsConstructor
 @Builder
 @Getter
-@Setter
 public class LectureGroup extends BaseTimeEntity {
 
     @Id
@@ -38,6 +37,8 @@ public class LectureGroup extends BaseTimeEntity {
     private Integer remaining;  // 남은 자리수
 
     private String address;
+    private String detailAddress;
+
 
 //    private String latitude;
 //
@@ -68,14 +69,23 @@ public class LectureGroup extends BaseTimeEntity {
     public void updateAddress(String address){
         this.address = address;
     }
+    public void updateDetailAddress(String detailAddress){this.detailAddress = detailAddress;}
     public void updateDate(LocalDate startDate, LocalDate endDate){
         this.startDate = startDate;
         this.endDate = endDate;
     }
 
+    public void updateIsAvailable(String status){
+        this.isAvailable = status;
+    }
+
     // 남은 자리수 감소
     public void decreaseRemaining(){
         this.remaining--;
+    }
+    // 자리 증가
+    public void increseRemaining(){
+        this.remaining++;
     }
 
     // 남은 자리수가 0인 경우 신청 종료

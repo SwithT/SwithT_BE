@@ -9,4 +9,5 @@ public class LecturePayResDto {
     private String title;     // 강의 제목
     private String impUid;    // 결제 고유 ID
     private long price;       // 결제 금액
+    private Long lectureGroupId;
 }

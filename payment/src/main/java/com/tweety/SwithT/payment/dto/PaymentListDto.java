@@ -18,4 +18,6 @@ public class PaymentListDto {
     private BigDecimal amount;
     private LocalDateTime paidAt;
     private String receiptUrl;
+    private String status;
+    private Long lectureGroupId;
 }

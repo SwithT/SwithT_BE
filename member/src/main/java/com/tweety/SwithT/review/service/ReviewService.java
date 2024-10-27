@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Transactional
 @Service
@@ -49,10 +51,24 @@ public class ReviewService {
     @Transactional(readOnly = true)
     public Page<ReviewListResDto> getReviewsByTutorId(Long tutorId, Pageable pageable) {
         Member tutor = memberRepository.findById(tutorId)
-                .orElseThrow(() -> new EntityNotFoundException("Tutor not found"));
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 TUTOR 입니다."));
 
         return reviewRepository.findByTutorId(tutor, pageable)
                 .map(Review::fromEntity);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ReviewListResDto> getAllReviewsByTutorId(Long tutorId) {
+        // 튜터 ID로 Member 객체를 조회
+        Member tutor = memberRepository.findById(tutorId)
+                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 튜터 정보입니다."));
+
+        // 해당 튜터의 모든 리뷰 조회
+        List<Review> reviews = reviewRepository.findAllByTutorId(tutor);
+
+        return reviews.stream()
+                .map(Review::fromEntity)
+                .collect(Collectors.toList());
     }
 
 //    @Transactional(readOnly = true)

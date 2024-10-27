@@ -22,6 +22,7 @@ public class MemberInfoResDto {
     private LocalDate birthday;
     private Gender gender;
     private String address;
+    private String detailAddress;
     private String email;
     private String phoneNumber;
     //튜터 필드

@@ -50,7 +50,7 @@ public class PaymentController {
     ) {
         try {
             // 환불 처리
-            paymentService.refund(id,refundReqDto.getImpUid(), refundReqDto.getAmount(), refundReqDto.getCancelReason());
+            paymentService.refund(id, refundReqDto.getCancelReason());
             CommonResDto commonResDto = new CommonResDto(
                     HttpStatus.OK, "환불 처리 완료", refundReqDto);
             return new ResponseEntity<>(commonResDto, HttpStatus.OK);

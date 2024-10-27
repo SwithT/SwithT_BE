@@ -88,6 +88,7 @@ public class CommentService {
         if(!comment.getMemberId().equals(loginMemberId)) throw new RuntimeException("해당 댓글을 작성한 회원만 삭제 가능합니다.");
 
         comment.updateDelYn();
-        return CommentDeleteResDto.fromEntity(comment);
+        Comment saveComment = commentRepository.save(comment);
+        return CommentDeleteResDto.fromEntity(saveComment);
     }
 }

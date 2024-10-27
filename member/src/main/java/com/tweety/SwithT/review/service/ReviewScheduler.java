@@ -24,7 +24,7 @@ public class ReviewScheduler {
     }
 
 
-//  @Scheduled(cron = "*/5 * * * * *") // 5초마다 실행 (필요에 따라 변경)
+//    @Scheduled(cron = "*/5 * * * * *") // 5초마다 실행 (필요에 따라 변경)
     @Scheduled(cron = "0 0 * * * *") // 매 정시마다 실행
     @Transactional
     public void postSchedule() {

@@ -72,7 +72,7 @@ public class CommonExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<CommonErrorDto> IllegalStateExceptionHandler(IllegalStateException e){
         e.printStackTrace();
-        CommonErrorDto commonErrorDto = new CommonErrorDto(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage());
-        return new ResponseEntity<>(commonErrorDto, HttpStatus.INTERNAL_SERVER_ERROR);
+        CommonErrorDto commonErrorDto = new CommonErrorDto(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+        return new ResponseEntity<>(commonErrorDto, HttpStatus.BAD_REQUEST);
     }
 }

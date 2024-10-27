@@ -31,13 +31,16 @@ public class LectureHomeResDto {
     // 강의 그룹 정보
     private Long groupId;
     private Integer limitPeople;
+    private Integer price;
 
     private String address;
+    private String detailAddress;
 //    private String latitude;
 
 //    private String longitude;
 
     private LocalDate startDate;
+    private LocalDate endDate;
 
     // 강의 그룹 일정
     @Builder.Default
@@ -45,4 +48,7 @@ public class LectureHomeResDto {
 
     // 단체 채팅방
     private Long chatRoomId;
+
+    private int totalDayCount; // 전체 요일 수업 개수
+    private int pastDayCount;  // 현재까지 진행된 수업 개수 추가
 }

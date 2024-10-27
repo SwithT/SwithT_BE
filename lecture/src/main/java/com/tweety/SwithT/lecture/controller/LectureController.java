@@ -19,7 +19,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -119,8 +121,10 @@ public class LectureController {
 
     // 강의 수정
     @PostMapping("/update/{id}")
-    public ResponseEntity<?> lectureUpdate(@PathVariable Long id, @RequestBody LectureUpdateReqDto dto) {
-        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의 업데이트", lectureService.lectureUpdate(id, dto));
+    public ResponseEntity<?> lectureUpdate(@PathVariable Long id,
+                                           @RequestPart(value = "data") LectureUpdateReqDto dto,
+                                           @RequestPart(value = "file", required = false) MultipartFile imgFile) {
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의 업데이트", lectureService.lectureUpdate(id, dto, imgFile));
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
 
@@ -133,16 +137,16 @@ public class LectureController {
     }
 
     // 강의 그룹 수정
-    @PostMapping("/update/lecture-group/{id}")
-    public ResponseEntity<?> lectureGroupUpdate(@PathVariable Long id, @RequestBody LectureGroupReqDto dto) {
+    @PutMapping("/update/lecture-group/{id}")
+    public ResponseEntity<?> lectureGroupUpdate(@PathVariable("id") Long id, @RequestBody LectureGroupReqDto dto) {
         lectureService.lectureGroupUpdate(id, dto);
         CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의 그룹 업데이트", id);
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
 
     // 강의 그룹 삭제
-    @PostMapping("/delete/lecture-group/{id}")
-    public ResponseEntity<?> lectureGroupDelete(@PathVariable Long id) {
+    @PutMapping("/delete/lecture-group/{id}")
+    public ResponseEntity<?> lectureGroupDelete(@PathVariable("id") Long id) {
         lectureService.lectureGroupDelete(id);
         CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "강의 그룹 삭제", id);
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
@@ -182,10 +186,33 @@ public class LectureController {
         }
     }
 
+    // 추천 검색어 API
+    @PostMapping("/lecture/recommend")
+    public ResponseEntity<List<String>> getRecommendedSearch(@RequestParam String keyword) {
+        try {
+            List<String> suggestions = lectureService.getSuggestions(keyword);
+            return ResponseEntity.ok(suggestions);
+        } catch (IOException | InterruptedException e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
     @GetMapping("/lecture-group-info/{id}")
     public ResponseEntity<?> getLectureGroupInfo(@PathVariable Long id){
         CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "해당 강의의 강의 그룹들 정보", lectureService.getLectureGroupsInfo(id));
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+    }
+
+    @GetMapping("/lecture-group/get-image-and-title/{id}")
+    public ResponseEntity<?> getImageAndThumbnailByGroupId(@PathVariable Long id){
+        LectureTitleAndImageResDto dto = lectureService.getTitleAndThumbnailByGroupId(id);
+        try {
+            CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "제목과 썸네일", dto);
+            return new ResponseEntity<>(commonResDto, HttpStatus.OK);
+        } catch (EntityNotFoundException e){
+            CommonErrorDto commonErrorDto = new CommonErrorDto(HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return new ResponseEntity<>(commonErrorDto, HttpStatus.NOT_FOUND);
+        }
     }
 
 }

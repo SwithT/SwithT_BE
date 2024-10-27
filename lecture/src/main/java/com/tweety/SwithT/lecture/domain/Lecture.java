@@ -5,6 +5,7 @@ import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.lecture.dto.LectureDetailResDto;
 import com.tweety.SwithT.lecture.dto.LectureInfoListResDto;
 import com.tweety.SwithT.lecture.dto.LectureListResDto;
+import com.tweety.SwithT.lecture.dto.LectureUpdateReqDto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,7 +33,7 @@ public class Lecture extends BaseTimeEntity {
     @Column(nullable = false)
     private String title;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 3000)
     private String contents;
 
     private String image;
@@ -47,6 +48,9 @@ public class Lecture extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     private LectureType lectureType;
 
+    @Column(nullable = false)
+    private Long searchCount;
+
     public LectureDetailResDto fromEntityToLectureResDto(){
         return LectureDetailResDto.builder()
                 .id(this.id)
@@ -58,6 +62,7 @@ public class Lecture extends BaseTimeEntity {
                 .memberId(this.memberId)
                 .memberName(this.memberName)
                 .lectureType(this.lectureType)
+                .searchCount(this.searchCount)
                 .build();
     }
 
@@ -107,22 +112,31 @@ public class Lecture extends BaseTimeEntity {
     @Builder.Default
     private List<LectureGroup> lectureGroups = new ArrayList<>();
 
+    public void updateLecture(LectureUpdateReqDto dto, String image) {
+        this.title = dto.getTitle();
+        this.contents = dto.getContents();
+        this.category = dto.getCategory();
+        this.image = image;
+    }
     public void updateStatus(Status status){
         this.status = status;
     }
 
-    // update
-    public void updateTitle(String title){
-        this.title = title;
-    }
-    public void updateContents(String contents){
-        this.contents = contents;
-    }
-    public void updateImage(String image){
-        this.image = image;
-    }
-    public void updateCategory(Category category){
-        this.category = category;
-    }
+//    // update
+//    public void updateTitle(String title){
+//        this.title = title;
+//    }
+//    public void updateContents(String contents){
+//        this.contents = contents;
+//    }
+//    public void updateImage(String image){
+//        this.image = image;
+//    }
+//    public void updateCategory(Category category){
+//        this.category = category;
+//    }
 
+    public void increaseCount(){
+        this.searchCount++;
+    }
 }

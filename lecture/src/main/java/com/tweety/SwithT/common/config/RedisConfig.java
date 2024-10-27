@@ -4,6 +4,7 @@ package com.tweety.SwithT.common.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import net.javacrumbs.shedlock.provider.redis.spring.RedisLockProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -63,6 +64,11 @@ public class RedisConfig {
         redisTemplate.setHashValueSerializer(serializer);
 
         return redisTemplate;
+    }
+
+    @Bean
+    public RedisLockProvider lockProvider(RedisConnectionFactory redisConnectionFactory) {
+        return new RedisLockProvider(redisConnectionFactory);
     }
 
 

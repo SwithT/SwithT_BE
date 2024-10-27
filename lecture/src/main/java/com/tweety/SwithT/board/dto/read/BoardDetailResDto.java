@@ -18,8 +18,10 @@ public class BoardDetailResDto {
     private String title;
     private String contents;
     private Type type;
+    private boolean isAuthor;
 
-    public static BoardDetailResDto fromEntity(Board board){
+
+    public static BoardDetailResDto fromEntity(Board board, Long memberId){
         return BoardDetailResDto.builder()
                 .id(board.getId())
                 .contents(board.getContents())
@@ -27,6 +29,7 @@ public class BoardDetailResDto {
                 .type(board.getType())
                 .memberId(board.getMemberId())
                 .memberName(board.getMemberName())
+                .isAuthor(board.getMemberId().equals(memberId))
                 .build();
     }
 }

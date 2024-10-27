@@ -140,6 +140,7 @@ public class MemberController {
     @PostMapping("/refresh-token")
     public ResponseEntity<?> generateNewAccessToken(@RequestBody MemberRefreshDto dto) {
 
+        System.out.println("리프래쉬 토큰이 호출 됐습니다.");
         String rt = dto.getRefreshToken();
         Claims claims = null;
 

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tweety.SwithT.member.domain.Member;
 import com.tweety.SwithT.member.repository.MemberRepository;
+import com.tweety.SwithT.scheduler.domain.ScheduleAlert;
 import com.tweety.SwithT.scheduler.domain.Scheduler;
 import com.tweety.SwithT.scheduler.dto.*;
 import com.tweety.SwithT.scheduler.repository.SchedulerAlertRepository;
@@ -31,15 +32,17 @@ public class SchedulerService {
     private final ObjectMapper objectMapper;
     private final MemberRepository memberRepository;
     private final SchedulerAlertRepository schedulerAlertRepository;
+    private final SchedulerAlertService schedulerAlertService;
 
-    public SchedulerService(SchedulerRepository schedulerRepository, ObjectMapper objectMapper, MemberRepository memberRepository, SchedulerAlertRepository schedulerAlertRepository) {
+    public SchedulerService(SchedulerRepository schedulerRepository, ObjectMapper objectMapper, MemberRepository memberRepository, SchedulerAlertRepository schedulerAlertRepository, SchedulerAlertService schedulerAlertService) {
         this.schedulerRepository = schedulerRepository;
         this.objectMapper = objectMapper;
         this.memberRepository = memberRepository;
         this.schedulerAlertRepository = schedulerAlertRepository;
+        this.schedulerAlertService = schedulerAlertService;
     }
 
-    @KafkaListener(topics = "schedule-update", groupId = "member-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "schedule-update", groupId = "member-group-schedule-update", containerFactory = "kafkaListenerContainerFactory")
     public void updateScheduleFromKafka(String message) {
         try {
 //            System.out.println("수신된 Kafka 메시지: " + message);
@@ -134,12 +137,23 @@ public class SchedulerService {
         if(!scheduler.getMember().equals(member)){
             throw new IllegalArgumentException("접근 권한이 없습니다.");
         }
-        scheduler.deleteSchedule();
-        schedulerRepository.save(scheduler);
+
+        if(scheduler.getLectureGroupId() != null){
+            throw new IllegalStateException("수업 일정은 삭제할 수 없습니다.");
+        } else if(scheduler.getLectureAssignmentId() != null){
+            throw new IllegalStateException("과제 일정은 삭제할 수 없습니다.");
+        } else{
+            scheduler.deleteSchedule();
+            ScheduleAlert scheduleAlert = schedulerAlertRepository.findBySchedulerId(schedulerId);
+            if(scheduleAlert!= null){
+                schedulerAlertService.cancelAlert(scheduleAlert.getId());
+            }
+            schedulerRepository.save(scheduler);
+        }
     }
 
     // 과제 생성 관련 kafka 리스터 추가
-    @KafkaListener(topics = "assignment-create", groupId = "lecture-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "assignment-create", groupId = "lecture-group-assignment-create", containerFactory = "kafkaListenerContainerFactory")
     public void handleAssignmentCreateMessage(String message) {
         try {
 //            System.out.println("Kafka 메시지 수신됨: " + message);
@@ -187,7 +201,7 @@ public class SchedulerService {
     }
 
     // 과제 수정 관련 kafka 리스너 추가 및 스케쥴 수정
-    @KafkaListener(topics = "assignment-update", groupId = "lecture-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "assignment-update", groupId = "lecture-group-assignment-update", containerFactory = "kafkaListenerContainerFactory")
     public void assignmentUpdate(String message) {
         try {
             System.out.println("Kafka 메시지 수신됨: " + message);
@@ -217,7 +231,7 @@ public class SchedulerService {
     }
 
 // 과제 삭제 카프카 리스너 추가 및 assignment id 기준으로 삭제
-    @KafkaListener(topics = "assignment-delete", groupId = "lecture-group", containerFactory = "kafkaListenerContainerFactory")
+    @KafkaListener(topics = "assignment-delete", groupId = "lecture-group-assignment-delete", containerFactory = "kafkaListenerContainerFactory")
     public void assignmentDelete(String message) {
         try {
             System.out.println("Kafka 메시지 수신됨: " + message);
@@ -270,4 +284,17 @@ public class SchedulerService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    @KafkaListener(topics = "schedule-cancel-update", groupId = "member-group-schedule-cancel-update", containerFactory = "kafkaListenerContainerFactory")
+    public void deleteScheduleByRefund(Long lectureGroupId){
+        List<Scheduler> schedulerList = schedulerRepository.findAllByLectureGroupId(lectureGroupId);
+
+        for(Scheduler scheduler: schedulerList){
+            scheduler.deleteSchedule();
+            ScheduleAlert scheduleAlert = schedulerAlertRepository.findBySchedulerId(scheduler.getId());
+            if(scheduleAlert!= null){
+                schedulerAlertService.cancelAlert(scheduleAlert.getId());
+            }
+        }
+    }
 }

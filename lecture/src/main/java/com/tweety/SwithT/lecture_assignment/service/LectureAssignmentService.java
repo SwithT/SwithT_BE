@@ -28,8 +28,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.kafka.core.KafkaTemplate;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class LectureAssignmentService {
@@ -85,7 +88,7 @@ public class LectureAssignmentService {
         return LectureAssignmentCreateResDto.fromEntity(lectureAssignment);
 
     }
-    public Page<LectureAssignmentListResDto> assignmentList(Long lectureGroupId, Pageable pageable){
+    public Page<LectureAssignmentListResDto> assignmentList(Long lectureGroupId, Pageable pageable, String isDashBoard){
         // Sort by createdTime in descending order
         Pageable sortedPageable = PageRequest.of(
                 pageable.getPageNumber(),
@@ -93,7 +96,19 @@ public class LectureAssignmentService {
                 Sort.by(Sort.Direction.DESC, "createdTime")
         );
         // delete yn
-        Page<LectureAssignment> lectureAssignments = lectureAssignmentRepository.findByLectureGroupIdAndDelYn(lectureGroupId,"N",sortedPageable);
+
+        Page<LectureAssignment> lectureAssignments = null;
+        if(Objects.equals(isDashBoard, "Y")) {
+            Pageable dashBoardPageable = PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize(),
+                    Sort.by(Sort.Direction.ASC, "endDate").and(Sort.by(Sort.Direction.ASC, "endTime"))
+            );
+            LocalDate currentDate = LocalDate.now();
+            LocalTime currentTime = LocalTime.now();
+            lectureAssignments= lectureAssignmentRepository.findImminentAssignmentsByLectureGroupAndDelYn(lectureGroupId,"N",currentDate,currentTime,dashBoardPageable);
+        }
+        else lectureAssignments =lectureAssignmentRepository.findByLectureGroupIdAndDelYn(lectureGroupId,"N",sortedPageable);
         return lectureAssignments.map(LectureAssignmentListResDto::fromEntity);
     }
 

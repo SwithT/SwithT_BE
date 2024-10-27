@@ -37,4 +37,5 @@ public interface LectureApplyRepository extends JpaRepository<LectureApply, Long
     @Query("SELECT COUNT(l) FROM LectureApply l WHERE l.lectureGroup.id = :lectureGroupId")
     long countByLectureGroupId(@Param("lectureGroupId") Long lectureGroupId);
 
+    List<LectureApply> findByStatusAndDelYn(Status status, String n);
 }

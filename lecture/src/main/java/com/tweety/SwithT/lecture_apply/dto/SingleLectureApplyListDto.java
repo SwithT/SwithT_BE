@@ -16,6 +16,7 @@ public class SingleLectureApplyListDto {
     private Long applyId;
     private Status status;
     private Long chatRoomId;
+    private String tuteeProfileImage;
 
 
 }

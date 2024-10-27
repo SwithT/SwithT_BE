@@ -1,35 +1,25 @@
 package com.tweety.SwithT.lecture_chat_room.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tweety.SwithT.common.auth.JwtTokenProvider;
 import com.tweety.SwithT.common.dto.CommonResDto;
 import com.tweety.SwithT.common.dto.MemberNameResDto;
 import com.tweety.SwithT.common.service.MemberFeign;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
 import com.tweety.SwithT.lecture.domain.LectureType;
 import com.tweety.SwithT.lecture.repository.LectureGroupRepository;
-import com.tweety.SwithT.lecture_apply.domain.LectureApply;
-import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplyListDto;
 import com.tweety.SwithT.lecture_chat_room.domain.LectureChatLogs;
 import com.tweety.SwithT.lecture_chat_room.domain.LectureChatParticipants;
 import com.tweety.SwithT.lecture_chat_room.domain.LectureChatRoom;
-import com.tweety.SwithT.lecture_chat_room.dto.*;
+import com.tweety.SwithT.lecture_chat_room.dto.ChatRoomCheckDto;
+import com.tweety.SwithT.lecture_chat_room.dto.ChatRoomResDto;
+import com.tweety.SwithT.lecture_chat_room.dto.MyChatRoomListResDto;
+import com.tweety.SwithT.lecture_chat_room.dto.SendMessageDto;
 import com.tweety.SwithT.lecture_chat_room.repository.LectureChatLogsRepository;
 import com.tweety.SwithT.lecture_chat_room.repository.LectureChatParticipantsRepository;
 import com.tweety.SwithT.lecture_chat_room.repository.LectureChatRoomRepository;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.Jwts;
 import jakarta.persistence.EntityNotFoundException;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
@@ -37,8 +27,6 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageSendingOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -106,12 +94,14 @@ public class LectureChatRoomService {
 
     }
 
+    // 튜터가 채팅하기 클릭 (과외)
     @Transactional
     public ChatRoomResDto tutorLessonChatCheckOrCreate(ChatRoomCheckDto dto) {
         LectureGroup lectureGroup = lectureGroupRepository.findByIdAndDelYn(dto.getLectureGroupId(), "N").orElseThrow(()->{
             throw new EntityNotFoundException("강의그룹을 찾을 수 없습니다.");
         });
-        Long tutorId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+//        승인 보내는 시점에서 tutorId가 admin의 id로 들어가서 주석 처리
+//        Long tutorId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
 
         List<LectureChatRoom> lectureChatRoomList = chatRoomRepository.findByLectureGroupAndDelYn(lectureGroup, "N");
         for(LectureChatRoom chatRoom: lectureChatRoomList){
@@ -140,7 +130,7 @@ public class LectureChatRoomService {
         //튜터 참가자 추가
         LectureChatParticipants tutor = LectureChatParticipants.builder()
                 .lectureChatRoom(newChatRoom)
-                .memberId(tutorId)
+                .memberId(lectureGroup.getLecture().getMemberId())
                 .build();
 
         chatParticipantsRepository.save(tutor);
@@ -150,6 +140,7 @@ public class LectureChatRoomService {
                 .build();
     }
 
+    //튜터가 강의 채팅방 있는지 확인하기
     public ChatRoomResDto tutorLectureChatCheck(Long lectureGroupId) {
         Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
         LectureGroup lectureGroup = lectureGroupRepository.findByIdAndDelYn(lectureGroupId, "N").orElseThrow(()->{
@@ -172,8 +163,6 @@ public class LectureChatRoomService {
 
     //채팅방 입장
     public void chatRoomEntered(String roomId) {
-//        final String msg = "누군가님이 입장하셨습니다.";
-//        kafkaTemplate.send("chat-"+roomId, msg);
         System.out.println(roomId + "방에 입장했습니다.");
     }
 
@@ -189,19 +178,10 @@ public class LectureChatRoomService {
                 .memberName(memberName)
                 .build();
         try{
-            ObjectMapper objectMapper = new ObjectMapper();
-
-            String messagePayload = objectMapper.writeValueAsString(sendMessageDto);
-            kafkaTemplate.send("chat-" + roomId, messagePayload);
-        }catch (JsonProcessingException e){
+            kafkaTemplate.send("chat-topic", roomId, sendMessageDto);
+        }catch (Exception e){
             e.printStackTrace();
         }
-
-
-//        CommonResDto commonResDto = memberFeign.getMemberNameById(memberId);
-//        ObjectMapper objectMapper = new ObjectMapper();
-//        MemberNameResDto memberNameResDto = objectMapper.convertValue(commonResDto.getResult(), MemberNameResDto.class);
-//        String memberName = memberNameResDto.getName();
 
         LectureChatRoom lectureChatRoom = chatRoomRepository.findById(Long.parseLong(roomId)).orElseThrow(()->{
             throw new EntityNotFoundException("채팅방이 존재하지 않습니다.");
@@ -213,25 +193,14 @@ public class LectureChatRoomService {
                 .contents(message)
                 .build();
         lectureChatLogsRepository.save(chatLogs);
-
-
-
     }
 
-    @KafkaListener(topicPattern = "chat-.*", groupId = "lecture-group", containerFactory = "kafkaListenerContainerFactory")
-    public void consumerChat(@Payload String messagePayload, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        System.out.println("messagePayload "+messagePayload);
-
+    @KafkaListener(topics = "chat-topic", groupId = "lecture-group", containerFactory = "kafkaListenerContainerFactory")
+    public void consumerChat(@Header(KafkaHeaders.RECEIVED_KEY) String chatRoomId, @Payload String msg) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
-            messagePayload = messagePayload.replace("\\\"", "\"").replace("\"{", "{").replace("}\"", "}");
-
-
-            SendMessageDto sendMessageDto = objectMapper.readValue(messagePayload, SendMessageDto.class);
-
-            String chatRoomId = topic.split("-")[1];
-            System.out.println("Received message for room " + chatRoomId + ": " + sendMessageDto.getMessage());
-
+            SendMessageDto sendMessageDto = objectMapper.readValue(msg, SendMessageDto.class);
+//            System.out.println("Received message for room " + chatRoomId + ": " + sendMessageDto.getMessage());
             template.convertAndSend("/topic/chat-" + chatRoomId, sendMessageDto);
         } catch (Exception e) {
             System.out.println("카프카 리스너 에러!!!!!"+e.getMessage()+"\n\n\n\n\n\n\n\n\n\n\n");
@@ -239,8 +208,9 @@ public class LectureChatRoomService {
         }
     }
 
+
     //내 채팅방 리스트
-    public Page<MyChatRoomListResDto> myChatRoomList(Pageable pageable, String chatRoomId) {
+    public List<MyChatRoomListResDto> myChatRoomList(String chatRoomId) {
         Long memberId = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
 
         List<LectureChatParticipants> lectureChatParticipantsList = new ArrayList<>();
@@ -251,7 +221,6 @@ public class LectureChatRoomService {
                 throw new EntityNotFoundException("채팅방이 존재하지 않습니다.");
             });
             lectureChatParticipantsList.add(selectedChatRoom);
-
         }
 
         if(!lectureChatParticipantsList.isEmpty()){
@@ -281,9 +250,7 @@ public class LectureChatRoomService {
             return a.fromEntityToMyChatRoomListResDto(memberName);
         }).toList();
 
-        PageRequest pageRequest = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize());
-        int start = (int) pageRequest.getOffset();
-        int end = Math.min((start + pageRequest.getPageSize()), myChatRoomListResDtoList.size());
-        return new PageImpl<>(myChatRoomListResDtoList.subList(start, end), pageRequest, myChatRoomListResDtoList.size());
+
+        return myChatRoomListResDtoList;
     }
 }

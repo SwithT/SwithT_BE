@@ -65,7 +65,7 @@ public class SchedulerController {
         }
     }
 
-    @PatchMapping("/scheduler/{id}/delete")
+    @PutMapping("/scheduler/{id}/delete")
     public ResponseEntity<?> deleteSchedule(@PathVariable Long id){
         schedulerService.deleteSchedule(id);
         try{
@@ -81,6 +81,10 @@ public class SchedulerController {
             CommonErrorDto commonErrorDto = new CommonErrorDto(
                     HttpStatus.FORBIDDEN.value(), e.getMessage());
             return new ResponseEntity<>(commonErrorDto, HttpStatus.FORBIDDEN);
+        } catch (IllegalStateException e){
+            CommonErrorDto commonErrorDto = new CommonErrorDto(
+                    HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return new ResponseEntity<>(commonErrorDto, HttpStatus.BAD_REQUEST);
         }
     }
 

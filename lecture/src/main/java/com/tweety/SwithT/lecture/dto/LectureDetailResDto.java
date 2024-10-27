@@ -25,4 +25,5 @@ public class LectureDetailResDto {
     private Status status;
     private Category category;
     private LectureType lectureType;
+    private Long searchCount;
 }

@@ -12,7 +12,10 @@ import java.util.Optional;
 
 @Repository
 public interface LectureGroupRepository extends JpaRepository<LectureGroup, Long> {
+
     List<LectureGroup> findByLectureId(Long lectureId);
+
+    List<LectureGroup> findByLectureIdAndDelYn(Long lectureId, String delYn);
 
     Optional<LectureGroup> findByIdAndIsAvailable(Long lectureGroupId, String isAvailable);
 

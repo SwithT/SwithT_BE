@@ -1,4 +1,4 @@
-package com.tweety.SwithT.common.service;
+package com.tweety.SwithT.common.Service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,6 +17,12 @@ import java.util.UUID;
 @Service
 public class S3Service {
 
+	@Value("${profile.image.male}")
+	private String maleProfileImage;
+
+	@Value("${profile.image.female}")
+	private String femaleProfileImage;
+
 	@Value("${cloud.aws.s3.bucket}")
 	private String bucketName;
 
@@ -30,48 +36,92 @@ public class S3Service {
 	// 단일 이미지 파일 업로드
 	public String uploadFile(MultipartFile imgFile, String folder) {
 
-		// 저장한 새로운 이름 생성
+
+		// 저장할 새로운 이름 생성
 		String fileName = createFileName(imgFile.getOriginalFilename());
 		String fileUrl = null;
-		// S3에 저장하고 저장된 url 리턴해서 데이터베이스에 저장
-		try{
+
+		// S3에 저장하고 저장된 URL 반환
+		try {
 			PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-				.bucket(bucketName)
-				.key(folder + "/" + fileName)
-				.contentType(imgFile.getContentType())
-				.contentLength(imgFile.getSize())
-				.build();
+					.bucket(bucketName)
+					.key(folder + "/" + fileName)
+					.contentType(imgFile.getContentType())
+					.contentLength(imgFile.getSize())
+					.build();
+
 			s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(imgFile.getInputStream(), imgFile.getSize()));
 
 			fileUrl = s3Client.utilities().getUrl(builder -> builder.bucket(bucketName).key(folder + "/" + fileName)).toExternalForm();
-		}catch(IOException e){
-			throw new RuntimeException("이미지 저장 실패");
+		} catch (IOException e) {
+			throw new RuntimeException("이미지 저장 실패", e);
 		}
+
 		return fileUrl;
 	}
 
+	// 단일 이미지 파일 업로드 null이여서 디폴트 이미지 설정하는 메서드 오버로딩
+	public String uploadFile(MultipartFile imgFile, String folder, String gender) {
 
-	// 다중 이미지 파일 업로드
+		// 파일이 null이거나 비어 있으면 성별에 따른 기본 이미지 URL을 반환
+		if (imgFile == null || imgFile.isEmpty()) {
+			if ("WOMAN".equalsIgnoreCase(gender)) {
+				return femaleProfileImage; // 여성 회원 디폴트 이미지
+
+			} else if ("MAN".equalsIgnoreCase(gender)) {
+				return maleProfileImage; // 남성 회원 디폴트 이미지.
+			}
+		}
+
+		// 저장할 새로운 이름 생성
+		String fileName = createFileName(imgFile.getOriginalFilename());
+		String fileUrl = null;
+
+		// S3에 저장하고 저장된 URL 반환
+		try {
+			PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+					.bucket(bucketName)
+					.key(folder + "/" + fileName)
+					.contentType(imgFile.getContentType())
+					.contentLength(imgFile.getSize())
+					.build();
+
+			s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(imgFile.getInputStream(), imgFile.getSize()));
+
+			fileUrl = s3Client.utilities().getUrl(builder -> builder.bucket(bucketName).key(folder + "/" + fileName)).toExternalForm();
+		} catch (IOException e) {
+			throw new RuntimeException("이미지 저장 실패", e);
+		}
+
+		return fileUrl;
+	}
+	// 다중 파일 이미지 업로드
 	public List<String> uploadMultiFile(List<MultipartFile> multipartFile) {
 		List<String> imgUrlList = new ArrayList<>();
 
 		for (MultipartFile file : multipartFile) {
+			// 파일이 null이거나 비어 있는지 확인
+			if (file == null || file.isEmpty()) {
+				continue;  // null 또는 빈 파일 건너뛰기
+			}
 
 			String uuidFileName = createFileName(file.getOriginalFilename());
 
-			try(InputStream inputStream = file.getInputStream()) {
+			try (InputStream inputStream = file.getInputStream()) {
 				PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-					.bucket(bucketName)
-					.key(uuidFileName)
-					.contentType(file.getContentType())
-					.contentLength(file.getSize())
-					.build();
+						.bucket(bucketName)
+						.key(uuidFileName)
+						.contentType(file.getContentType())
+						.contentLength(file.getSize())
+						.build();
+
 				s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(inputStream, file.getSize()));
 				imgUrlList.add(s3Client.utilities().getUrl(a -> a.bucket(bucketName).key(uuidFileName)).toExternalForm());
-			} catch(IOException e) {
-				throw new RuntimeException("이미지 저장 실패");
+			} catch (IOException e) {
+				throw new RuntimeException("이미지 저장 실패", e);
 			}
 		}
+
 		return imgUrlList;
 	}
 

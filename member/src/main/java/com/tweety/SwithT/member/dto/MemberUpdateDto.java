@@ -20,6 +20,7 @@ public class MemberUpdateDto {
     private LocalDate birthday;
     private String gender;
     private String address;
+    private String detailAddress;
     private String phoneNumber;
     //튜터 필드
     private String education;

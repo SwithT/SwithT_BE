@@ -36,6 +36,7 @@ public class LectureCreateReqDto {
                 .category(this.category)
                 .status(this.status)
                 .lectureType(this.lectureType)
+                .searchCount(0L)
                 .build();
     }
 }

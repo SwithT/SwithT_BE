@@ -16,6 +16,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 public class ReviewController {
 
@@ -46,6 +48,16 @@ public class ReviewController {
         CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "업데이트 성공", updateReview);
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
 
+    }
+
+    // 전체 리뷰를 가져오는 메서드 추가
+    @GetMapping("/review/all")
+    public ResponseEntity<?> getAllReviews(@RequestParam Long tutorId) {
+
+        List<ReviewListResDto> allReviews = reviewService.getAllReviewsByTutorId(tutorId);
+
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "전체 리뷰 조회 성공", allReviews);
+        return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
 
     // 리뷰 리스트 조회 ( 최신순, 오래된순, 별점높은순, 별점낮은순 )

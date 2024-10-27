@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
@@ -21,6 +22,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     @Query("SELECT AVG(r.star) FROM Review r WHERE r.tutorId.id = :tutorId")
     BigDecimal findAverageScoreByTutorId(@Param("tutorId") Long tutorId);
+
+    List<Review> findAllByTutorId(Member tutorId);
 
     // 특정 tutorId에 해당하는 리뷰만 조회 (Member 타입 사용)
     Page<Review> findByTutorId(Member tutorId, Pageable pageable);

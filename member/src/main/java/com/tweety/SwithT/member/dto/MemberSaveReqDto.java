@@ -49,6 +49,8 @@ public class MemberSaveReqDto {
 
     @Nullable
     private String address;
+    @Nullable
+    private String detailAddress;
 
     @Nullable
     private String profileImage;
@@ -77,6 +79,7 @@ public class MemberSaveReqDto {
                 .birthday(this.birthday)
                 .phoneNumber(this.phoneNumber)
                 .address(this.address)
+                .detailAddress(this.detailAddress)
                 .profileImage(imageUrl) // s3 이미지 경로
                 .education(this.education)
                 .introduce(this.introduce)

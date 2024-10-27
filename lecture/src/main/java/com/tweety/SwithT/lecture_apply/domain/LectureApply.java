@@ -3,6 +3,7 @@ package com.tweety.SwithT.lecture_apply.domain;
 import com.tweety.SwithT.common.domain.BaseTimeEntity;
 import com.tweety.SwithT.common.domain.Status;
 import com.tweety.SwithT.lecture.domain.LectureGroup;
+import com.tweety.SwithT.lecture.domain.ReviewStatus;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureApplyListDto;
 import com.tweety.SwithT.lecture_apply.dto.SingleLectureTuteeListDto;
 import jakarta.persistence.*;
@@ -44,10 +45,22 @@ public class LectureApply extends BaseTimeEntity {
     @Column(nullable = true)
     private String location;
 
+    @Column(nullable = true)
+    private String detailAddress;
+
     @Builder.Default
     @Enumerated(EnumType.STRING)
     private Status status = Status.STANDBY;
 
+    @Builder.Default // 김민성 리뷰 관리를 위해 추가
+    @Enumerated(EnumType.STRING)
+    private ReviewStatus reviewStatus = ReviewStatus.N;
+
+    public void updateReviewStatus(ReviewStatus updateReviewStatus){
+
+        this.reviewStatus = updateReviewStatus;
+
+    }
 
     public SingleLectureApplyListDto fromEntityToSingleLectureApplyListDto(){
         return SingleLectureApplyListDto.builder()
@@ -71,10 +84,8 @@ public class LectureApply extends BaseTimeEntity {
     }
 
     public void updatePaidStatus(String updateStatus) {
-        System.out.println("잘 들어옴, 결과: " + updateStatus);
         switch (updateStatus) {
             case "paid":
-                System.out.println("paid일 때");
                 this.status = Status.ADMIT; // 결제 완료 시 ADMIT 상태로 변경
                 break;
             case "cancelled":

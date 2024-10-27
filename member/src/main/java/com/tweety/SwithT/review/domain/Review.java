@@ -41,18 +41,33 @@ public class Review extends BaseTimeEntity {
     @Column(nullable = false)
     private String contents;
 
+    @Column(nullable = true)
+    private String profileImage;
+
+    @Column(nullable = false)
+    private Long applyId;
+
+    @Column(nullable = true) // 동명이인 고려
+    private String name;
+
+
     public ReviewListResDto fromEntity(){
         return ReviewListResDto.builder()
+                .writerId(this.writerId.getId())
+                .id(this.id)
                 .createdTime(this.getCreatedTime())
                 .star(this.star)
                 .title(this.title)
                 .contents(this.contents)
+                .profileImage(this.profileImage)
+                .name(this.name)
                 .build();
     }
 
     public void updateReview(ReviewUpdateDto dto){
         this.title = dto.getTitle();
         this.contents = dto.getContents();
+        this.star = dto.getRating();
     }
 
 }

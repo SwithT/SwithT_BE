@@ -19,6 +19,7 @@ spring:
               - POST
               - DELETE
               - OPTIONS
+              - PATCH
       routes:
         - id: payment-service
           #         predicates =  payment-service로 요청이 들어오면

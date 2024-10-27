@@ -29,8 +29,8 @@ public class LectureAssignmentController {
 
     // 목록
     @GetMapping("/lecture/{lectureGroupId}/assignment")
-    public ResponseEntity<CommonResDto> assignmentList(@PathVariable("lectureGroupId") Long lectureGroupId, Pageable pageable){
-        Page<LectureAssignmentListResDto> lectureAssignmentListResponses = lectureAssignmentService.assignmentList(lectureGroupId,pageable);
+    public ResponseEntity<CommonResDto> assignmentList(@PathVariable("lectureGroupId") Long lectureGroupId, Pageable pageable, @RequestParam(required = false, name = "isDashBoard")String isDashBoard){
+        Page<LectureAssignmentListResDto> lectureAssignmentListResponses = lectureAssignmentService.assignmentList(lectureGroupId,pageable, isDashBoard);
         return new ResponseEntity<>(new CommonResDto(HttpStatus.OK,"과제 목록이 조회되었습니다.",lectureAssignmentListResponses),HttpStatus.OK);
     }
     // 상세

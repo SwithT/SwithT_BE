@@ -28,15 +28,6 @@ import javax.swing.text.html.parser.Entity;
 @RestController
 @RequiredArgsConstructor
 public class LectureChatRoomController {
-//    private final SimpMessageSendingOperations sendingOperations;
-//
-//    @MessageMapping("/message")
-//    public void enter(SendMessage message){
-//        Message.
-//        if(Message.MessageType.ENTER.equals(message.getType()))
-//    }
-
-
     private final LectureChatRoomService lectureChatRoomService;
     private final SimpMessagingTemplate template;
 
@@ -79,18 +70,9 @@ public class LectureChatRoomController {
 
     //채팅방 목록
     @GetMapping("/room/list")
-    public ResponseEntity<?>  myRoomList(@PageableDefault(size = 6, page = 0)Pageable pageable, String chatRoomId){
-        System.out.println("정하님 과외 매칭 성공되면 나머지 채팅방 delYn = Y 해주셨나요?? 집에 가고싶어요");
-
-        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "나의 채팅방 리스트", lectureChatRoomService.myChatRoomList(pageable, chatRoomId));
+    public ResponseEntity<?>  myRoomList(String chatRoomId){
+        CommonResDto commonResDto = new CommonResDto(HttpStatus.OK, "나의 채팅방 리스트", lectureChatRoomService.myChatRoomList(chatRoomId));
         return new ResponseEntity<>(commonResDto, HttpStatus.OK);
     }
-
-//    @MessageMapping("/chatroom-connect")
-//    public void chatRoomCreate(@RequestBody ChatRoomConnectDto chatRoomConnectDto, @Header("Authorization")String bearerToken){
-//        lectureChatRoomService.chatRoomConnect(chatRoomConnectDto, bearerToken);
-//
-//    }
-
 
 }

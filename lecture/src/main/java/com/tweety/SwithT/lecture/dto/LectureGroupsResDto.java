@@ -19,6 +19,7 @@ public class LectureGroupsResDto {
     private int remaining;
     private int price;
     private String address;
+    private String detailAddress;
     private LocalDate startDate;
     private LocalDate endDate;
 

@@ -67,6 +67,11 @@ public class JwtAuthFilter extends GenericFilter {
             httpServletResponse.setStatus(HttpStatus.UNAUTHORIZED.value());
             httpServletResponse.setContentType("application/json");
             httpServletResponse.getWriter().write("token error");
+        } catch (io.jsonwebtoken.ExpiredJwtException e){
+            HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
+            httpServletResponse.setStatus(HttpStatus.UNAUTHORIZED.value());
+            httpServletResponse.setContentType("application/json");
+            httpServletResponse.getWriter().write("token expired");
         }
     }
 }

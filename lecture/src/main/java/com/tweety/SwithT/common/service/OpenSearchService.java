@@ -18,6 +18,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.opensearch.OpenSearchClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -112,15 +113,19 @@ public class OpenSearchService {
                 .build();
 
         InputStream s3InputStream = s3.getObject(getObjectRequest);
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(s3InputStream, StandardCharsets.UTF_8));
+            StringBuilder content = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append("\n");
+            }
+            return content.toString();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(s3InputStream, StandardCharsets.UTF_8));
-        StringBuilder content = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            content.append(line).append("\n");
+        } catch (NoSuchKeyException e) {
+            System.out.println("설치 실패");
+            throw new IllegalArgumentException(e.getMessage());
         }
-
-        return content.toString();
     }
 
     private void createIndex(String indexName) throws IOException, InterruptedException {
@@ -129,6 +134,7 @@ public class OpenSearchService {
         // S3에서 인덱스 설정 파일 다운로드
         String key = "lecture-service/lecture-index.json";
         String indexMapping = downloadIndexConfigFromS3(bucketName, key);
+        System.out.println("다운로드된 인덱스 매핑 설정: " + indexMapping);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(endpoint))
@@ -176,27 +182,20 @@ public class OpenSearchService {
         }
     }
 
-    // OpenSearch에서 강의를 검색하는 메서드
     public List<LectureDetailResDto> searchLectures(String keyword, Pageable pageable, LectureSearchDto searchDto) throws IOException, InterruptedException {
-        String endpoint = openSearchUrl + "/lecture-service/_search";
+        String endpoint = openSearchUrl + "/lecture-service/_search?scroll=1m";
 
         // 필터 조건을 구성하기 전에 빈 값인지 확인하여 필터링 처리
         List<String> filters = new ArrayList<>();
 
-        System.out.println("category: " + searchDto.getCategory());
-        System.out.println("status: " + searchDto.getStatus());
-        System.out.println("lectureType: " + searchDto.getLectureType());
-        // category 필터가 비어있으면 모든 카테고리 검색, 그렇지 않으면 카테고리 필터 추가
         if (searchDto.getCategory() != null && !searchDto.getCategory().isEmpty()) {
             filters.add(String.format("{\"match\": {\"category\": \"%s\"}}", searchDto.getCategory()));
         }
 
-        // status 필터
         if (searchDto.getStatus() != null && !searchDto.getStatus().isEmpty()) {
             filters.add(String.format("{\"match\": {\"status\": \"%s\"}}", searchDto.getStatus()));
         }
 
-        // lectureType 필터
         if (searchDto.getLectureType() != null && !searchDto.getLectureType().isEmpty()) {
             filters.add(String.format("{\"match\": {\"lectureType\": \"%s\"}}", searchDto.getLectureType()));
         }
@@ -204,33 +203,45 @@ public class OpenSearchService {
         // 필터가 없으면 빈 배열로 처리, 있으면 join으로 연결
         String filterQuery = filters.isEmpty() ? "" : String.join(",", filters);
 
-        // 필터가 있을 경우만 'filter'를 추가
-        String requestBody;
-        requestBody = String.format("""
+        // OpenSearch 요청에 페이지네이션 값 적용
+        int size = 100; // `scroll` API의 최대 크기를 사용
+
+        // OpenSearch 쿼리 생성
+        String queryPart;
+        if (keyword == null || keyword.isEmpty()) {
+            queryPart = """
         {
-            "query": {
+            "match_all": {}
+        }
+        """;
+        } else {
+            queryPart = String.format("""
+        {
+            "multi_match": {
+                "query": "%s",
+                "fields": ["title", "contents", "memberName"],
+                "analyzer": "ngram_analyzer"
+            }
+        }
+        """, keyword);
+        }
+
+        // 필터가 있을 경우만 'filter'를 추가
+        String requestBody = String.format("""
+        {
+                "query": {
                 "bool": {
-                    "must": [
-                        {
-                            "multi_match": {
-                                "query": "%s",
-                                "fields": ["title", "contents", "memberName"],
-                                "type": "phrase_prefix",
-                                "analyzer": "ngram_analyzer"
-                            }
-                        }
-                    ]%s
+                    "must": [%s]%s
                 }
             },
-            "from": %d,
+            "sort": [
+                {"id": {"order": "desc"}}
+            ],
             "size": %d
         }
-        """, keyword, filters.isEmpty() ? "" : String.format(", \"filter\": [%s]", filterQuery), pageable.getOffset(), pageable.getPageSize());
+        """, queryPart, filters.isEmpty() ? "" : String.format(", \"filter\": [%s]", filterQuery), size);
 
-
-        // 쿼리 내용 로그 출력 (디버깅용)
-        System.out.println("OpenSearch Request Body: " + requestBody);
-
+        // 첫 번째 요청
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(endpoint))
                 .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes()))
@@ -239,48 +250,97 @@ public class OpenSearchService {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println("response: " + response.body());
-        if (response.statusCode() == 200) {
-            return parseSearchResults(response.body());
-        } else {
+
+        if (response.statusCode() != 200) {
             throw new IOException("OpenSearch 검색 요청 실패: " + response.body());
         }
+
+        // 첫 번째 응답에서 scroll_id를 가져옴
+        JsonNode jsonNode = objectMapper.readTree(response.body());
+        String scrollId = jsonNode.path("_scroll_id").asText();
+        List<LectureDetailResDto> lectureList = parseSearchResults(response.body());
+
+        // scroll API를 통해 계속해서 데이터를 가져옴
+        while (true) {
+            String scrollRequestBody = String.format("""
+        {
+            "scroll": "1m",
+            "scroll_id": "%s"
+        }
+        """, scrollId);
+
+            HttpRequest scrollRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(openSearchUrl + "/_search/scroll"))
+                    .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes()))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(scrollRequestBody))
+                    .build();
+
+            HttpResponse<String> scrollResponse = client.send(scrollRequest, HttpResponse.BodyHandlers.ofString());
+
+            if (scrollResponse.statusCode() != 200) {
+                throw new IOException("OpenSearch scroll 요청 실패: " + scrollResponse.body());
+            }
+
+            JsonNode scrollNode = objectMapper.readTree(scrollResponse.body());
+            JsonNode hits = scrollNode.path("hits").path("hits");
+
+            if (!hits.isArray() || hits.size() == 0) {
+                break; // 더 이상 가져올 데이터가 없으면 루프 종료
+            }
+
+            lectureList.addAll(parseSearchResults(scrollResponse.body()));
+        }
+
+        return lectureList;
     }
 
-    // OpenSearch에서 category로만 검색하는 메서드
-    public List<LectureDetailResDto> searchLecturesByCategory(String category, Pageable pageable) throws IOException, InterruptedException {
-        String endpoint = openSearchUrl + "/lecture-service/_search";
+    // 카테고리로만 검색하는 메서드
+    public List<LectureDetailResDto> searchLecturesByCategory(LectureSearchDto searchDto, Pageable pageable) throws IOException, InterruptedException {
+        String endpoint = openSearchUrl + "/lecture-service/_search?scroll=1m";
 
-        // 필터가 비어있지 않으면 카테고리 필터를 추가
-        String filterQuery = "";
-        if (category != null && !category.isEmpty()) {
-            filterQuery = String.format("""
-        {
-            "match": {
-                "category": "%s"
-            }
-        }
-        """, category);
+        List<String> filters = new ArrayList<>();
+
+        // 카테고리 필터
+        if (searchDto.getCategory() != null && !searchDto.getCategory().isEmpty()) {
+            filters.add(String.format("{\"match\": {\"category\": \"%s\"}}", searchDto.getCategory()));
         }
 
-        // 필터가 있을 경우에만 filter를 추가
+        // 상태 필터
+        if (searchDto.getStatus() != null && !searchDto.getStatus().isEmpty()) {
+            filters.add(String.format("{\"match\": {\"status\": \"%s\"}}", searchDto.getStatus()));
+        }
+
+        // 강의 유형 필터
+        if (searchDto.getLectureType() != null && !searchDto.getLectureType().isEmpty()) {
+            filters.add(String.format("{\"match\": {\"lectureType\": \"%s\"}}", searchDto.getLectureType()));
+        }
+
+        // 필터를 연결하여 쿼리 생성
+        String filterQuery = filters.isEmpty() ? "" : String.join(",", filters);
+
+        // OpenSearch 요청에 페이지네이션 값 적용
+        int size = 100; // `scroll` API의 최대 크기를 사용
+
+        // 필터가 없으면 빈 배열로 처리, 있으면 join으로 연결
+        String filterPart = filters.isEmpty() ? "" : String.format(", \"filter\": [%s]", filterQuery);
+
+        // 필터 쿼리 생성
         String requestBody = String.format("""
         {
             "query": {
                 "bool": {
-                    "filter": [
-                        %s
-                    ]
+                    "must": []%s
                 }
             },
-            "from": %d,
+            "sort": [
+                {"id": {"order": "desc"}}
+            ],
             "size": %d
         }
-        """, filterQuery, pageable.getOffset(), pageable.getPageSize());
+        """, filterPart, size);
 
-        // 쿼리 내용 로그 출력 (디버깅용)
-        System.out.println("OpenSearch Request Body: " + requestBody);
-
+        // 첫 번째 요청
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(endpoint))
                 .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes()))
@@ -289,16 +349,51 @@ public class OpenSearchService {
                 .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-        System.out.println("response: " + response.body());
 
-        if (response.statusCode() == 200) {
-            return parseSearchResults(response.body());
-        } else {
+        if (response.statusCode() != 200) {
             throw new IOException("OpenSearch 검색 요청 실패: " + response.body());
         }
+
+        // 첫 번째 응답에서 scroll_id를 가져옴
+        JsonNode jsonNode = objectMapper.readTree(response.body());
+        String scrollId = jsonNode.path("_scroll_id").asText();
+        List<LectureDetailResDto> lectureList = parseSearchResults(response.body());
+
+        // scroll API를 통해 계속해서 데이터를 가져옴
+        while (true) {
+            String scrollRequestBody = String.format("""
+            {
+                "scroll": "1m",
+                "scroll_id": "%s"
+            }
+            """, scrollId);
+
+            HttpRequest scrollRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(openSearchUrl + "/_search/scroll"))
+                    .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes()))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(scrollRequestBody))
+                    .build();
+
+            HttpResponse<String> scrollResponse = client.send(scrollRequest, HttpResponse.BodyHandlers.ofString());
+
+            if (scrollResponse.statusCode() != 200) {
+                throw new IOException("OpenSearch scroll 요청 실패: " + scrollResponse.body());
+            }
+
+            JsonNode scrollNode = objectMapper.readTree(scrollResponse.body());
+            JsonNode hits = scrollNode.path("hits").path("hits");
+
+            if (!hits.isArray() || hits.size() == 0) {
+                break; // 더 이상 가져올 데이터가 없으면 루프 종료
+            }
+
+            lectureList.addAll(parseSearchResults(scrollResponse.body()));
+        }
+
+        return lectureList;
     }
 
-    // OpenSearch 응답을 LectureDetailResDto 리스트로 변환하는 메서드
     private List<LectureDetailResDto> parseSearchResults(String responseBody) throws IOException {
         List<LectureDetailResDto> lectureList = new ArrayList<>();
         JsonNode jsonNode = objectMapper.readTree(responseBody);
@@ -306,12 +401,88 @@ public class OpenSearchService {
 
         for (JsonNode hit : hits) {
             JsonNode source = hit.path("_source");
-            System.out.println("source" + source);
             LectureDetailResDto lecture = objectMapper.treeToValue(source, LectureDetailResDto.class);
             lectureList.add(lecture);
         }
 
+        // totalHits 값을 로그로 확인하거나 필요시 사용할 수 있음
+        long totalHits = jsonNode.path("hits").path("total").path("value").asLong();
+        System.out.println("Total Hits: " + totalHits);
+
         return lectureList;
+    }
+
+    public List<String> getSuggestions(String keyword) throws IOException, InterruptedException {
+        String endpoint = openSearchUrl + "/lecture-service/_search";
+
+        // 검색된 횟수를 기준으로 정렬하고 상위 10개의 검색어만 반환하는 쿼리
+        String requestBody = String.format("""
+        {
+                "query": {
+                    "bool": {
+                        "should": [
+                            {
+                                "match": {
+                                    "title": {
+                                        "query": "%s",
+                                        "operator": "and"
+                                    }
+                                }
+                            },
+                            {
+                                "match": {
+                                    "contents": {
+                                        "query": "%s",
+                                        "operator": "and"
+                                    }
+                                }
+                            },
+                            {
+                                "match": {
+                                    "memberName": {
+                                        "query": "%s",
+                                        "operator": "and"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "sort": [
+                    { "search_count": { "order": "desc" } }
+                ],
+                "size": 10
+        }
+        """, keyword, keyword, keyword);
+
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(endpoint))
+                .header("Authorization", "Basic " + Base64.getEncoder().encodeToString((username + ":" + password).getBytes()))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build();
+
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+        if (response.statusCode() == 200) {
+            return parseSuggestions(response.body());
+        } else {
+            throw new IOException("추천 검색 요청 실패: " + response.body());
+        }
+    }
+
+    // 응답 파싱 메서드
+    private List<String> parseSuggestions(String responseBody) throws IOException {
+        List<String> suggestions = new ArrayList<>();
+        JsonNode jsonNode = objectMapper.readTree(responseBody);
+        JsonNode hits = jsonNode.path("hits").path("hits");
+
+        for (JsonNode hit : hits) {
+            String suggestion = hit.path("_source").path("title").asText();  // 제목을 추천어로 사용
+            suggestions.add(suggestion);
+        }
+
+        return suggestions;
     }
 
     @PostConstruct

@@ -72,11 +72,13 @@ public class Member extends BaseTimeEntity {
 
     @Column(nullable = true)
     private String address;
+    @Column(nullable = true)
+    private String detailAddress;
 
     @Column(nullable = true)
     private String profileImage;
 
-    @Column(nullable = true)
+    @Column(nullable = true, length = 1000)
     private String introduce;
 
     @Column(nullable = true)
@@ -108,6 +110,7 @@ public class Member extends BaseTimeEntity {
                 .birthday(this.birthday)
                 .gender(this.gender)
                 .address(this.address)
+                .detailAddress(this.detailAddress)
                 .email(this.email)
                 .phoneNumber(this.phoneNumber)
                 .education(this.education)
@@ -122,6 +125,7 @@ public class Member extends BaseTimeEntity {
         this.birthday = dto.getBirthday();
         this.gender = Gender.valueOf(dto.getGender());
         this.address = dto.getAddress();
+        this.detailAddress = dto.getDetailAddress();
         this.phoneNumber = dto.getPhoneNumber();
         this.education = dto.getEducation();
         this.introduce = dto.getIntroduce();
@@ -133,10 +137,12 @@ public class Member extends BaseTimeEntity {
         this.birthday = memberAddInfoReqDto.getBirthday();
         this.gender = memberAddInfoReqDto.getGender();
         this.address = memberAddInfoReqDto.getAddress();
+        this.detailAddress = memberAddInfoReqDto.getDetailAddress();
         this.phoneNumber = memberAddInfoReqDto.getPhoneNumber();
         this.education = memberAddInfoReqDto.getEducation();
         this.introduce = memberAddInfoReqDto.getIntroduce();
         this.profileImage = memberAddInfoReqDto.getProfileImage(); // 어떻게 될지 모르겟는데 일단 해봐
+        this.role = memberAddInfoReqDto.getRole();
         
         return this;
     }

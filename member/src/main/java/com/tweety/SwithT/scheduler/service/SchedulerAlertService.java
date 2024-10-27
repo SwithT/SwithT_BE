@@ -120,11 +120,6 @@ public class SchedulerAlertService {
     }
 
     public void cancelAlert(Long alertId){
-        Member member = memberRepository.findById(
-                Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName())).orElseThrow(
-                () -> new EntityNotFoundException("존재하지 않는 회원 정보입니다.")
-        );
-
         ScheduleAlert scheduleAlert = schedulerAlertRepository.findById(alertId).orElseThrow(
                 () -> new EntityNotFoundException("알람 정보 불러오기에 실패했습니다.")
         );

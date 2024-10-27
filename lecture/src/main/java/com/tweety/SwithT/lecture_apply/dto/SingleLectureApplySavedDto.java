@@ -25,6 +25,7 @@ public class SingleLectureApplySavedDto {
     private LocalDate endDate;
 
     private String location;
+    private String detailAddress;
 
     public LectureApply toEntity(LectureGroup lectureGroup, Long memberId, String memberName){
         return LectureApply.builder()
@@ -35,6 +36,7 @@ public class SingleLectureApplySavedDto {
                 .endDate(this.endDate)
                 .status(Status.STANDBY)
                 .location(this.location)
+                .detailAddress(this.detailAddress)
                 .build();
     }
 
