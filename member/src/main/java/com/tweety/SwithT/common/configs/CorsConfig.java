@@ -15,7 +15,7 @@ public class CorsConfig implements WebMvcConfigurer {
                        "https://server.switht.co.kr/member-service/login/oauth2/code/kakao",
                        "https://server.switht.co.kr/member-service/oauth2/authorization/google",
                        "https://server.switht.co.kr/member-service/oauth2/authorization/kakao",
-                       "http://localhost:8081")
+                       "http://localhost:8081", "https://www.woojin.today", "https://server.woojin.today")
                .allowedMethods("*")    //get, post, ...
                .allowedHeaders("*")
                .allowCredentials(true);
