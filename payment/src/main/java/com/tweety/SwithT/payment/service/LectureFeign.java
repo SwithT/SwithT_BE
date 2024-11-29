@@ -6,8 +6,8 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-//@FeignClient(name="lecture-service", url = "http://lecture-service",configuration = FeignConfig.class) // 배포후 용도
-@FeignClient(name="lecture-service", configuration = FeignConfig.class) // 로컬 용도
+@FeignClient(name="lecture-service", url = "http://lecture-service",configuration = FeignConfig.class) // 배포후 용도
+//@FeignClient(name="lecture-service", configuration = FeignConfig.class) // 로컬 용도
 public interface LectureFeign {
 
 //    @GetMapping(value = "/lecture/group/{id}")
