@@ -63,4 +63,4 @@ cloud:
     region:
       static: ap-northeast-2  # S3 및 OpenSearch 동일 리전 사용
     s3:
-      bucket: minseong-file
+      bucket: www.woojin.today

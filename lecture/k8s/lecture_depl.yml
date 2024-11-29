@@ -16,7 +16,7 @@ spec:
       containers:
         - name: lecture
           # AWS의 ecr 주소 사용
-          image: 533267389389.dkr.ecr.ap-northeast-2.amazonaws.com/tweety-lecture:latest
+          image: 011528259023.dkr.ecr.ap-northeast-2.amazonaws.com/tweety-lecture:latest
           ports:
             - containerPort: 8080
           resources:

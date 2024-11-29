@@ -26,7 +26,7 @@ jobs:
           aws-region: ap-northeast-2
 
       - name: update cluster information
-        run: aws eks update-kubeconfig --name switht-server --region ap-northeast-2
+        run: aws eks update-kubeconfig --name switht --region ap-northeast-2
 
       - name: login ECR
         id: login-ecr
@@ -34,7 +34,7 @@ jobs:
 
       - name: build and push docker member image to ecr
         env:
-          REGISTRY: 533267389389.dkr.ecr.ap-northeast-2.amazonaws.com
+          REGISTRY: 011528259023.dkr.ecr.ap-northeast-2.amazonaws.com
           REPOSITORY: tweety-member
         run: |
           docker build -t $REGISTRY/$REPOSITORY:latest \
@@ -48,7 +48,7 @@ jobs:
 
       - name: build and push docker lecture image to ecr
         env:
-          REGISTRY: 533267389389.dkr.ecr.ap-northeast-2.amazonaws.com
+          REGISTRY: 011528259023.dkr.ecr.ap-northeast-2.amazonaws.com
           REPOSITORY: tweety-lecture
         run: |
           docker build -t $REGISTRY/$REPOSITORY:latest \
@@ -62,7 +62,7 @@ jobs:
 
       - name: build and push docker payment image to ecr
         env:
-          REGISTRY: 533267389389.dkr.ecr.ap-northeast-2.amazonaws.com
+          REGISTRY: 011528259023.dkr.ecr.ap-northeast-2.amazonaws.com
           REPOSITORY: tweety-payment
         run: |
           docker build -t $REGISTRY/$REPOSITORY:latest \
